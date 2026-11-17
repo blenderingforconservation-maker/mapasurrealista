@@ -1,21 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Mapa Surrealista WebAR - Leonora Carrington</title>
-    <!-- A-Frame and MindAR library scripts -->
+    <!-- A-Frame y MindAR v1.2.5 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2/css2?family=Cinzel:wght@400;700&family=Montserrat:ital,wght@0,300;0,400;1,300&display=swap');
+
         body {
             margin: 0;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Montserrat', sans-serif;
+            background-color: #0d0d0d;
+            color: #f0e6d2;
         }
+
         #ui-container {
             position: absolute;
-            bottom: 30px;
+            bottom: 35px;
             left: 0;
             width: 100%;
             display: flex;
@@ -25,135 +30,164 @@
             z-index: 1000;
             pointer-events: none;
         }
-        .ui-btn {
+
+        .carrington-btn {
             pointer-events: auto;
-            background: rgba(20, 20, 20, 0.75);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 15px;
-            font-weight: 600;
+            background: rgba(18, 18, 18, 0.85);
+            color: #d4af37;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            padding: 14px 28px;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
             cursor: pointer;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 25px rgba(0,0,0,0.7);
         }
-        .ui-btn:active {
-            transform: scale(0.95);
-            background: rgba(50, 50, 50, 0.9);
+
+        .carrington-btn:hover, .carrington-btn:active {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: #d4af37;
+            color: #ffffff;
+            transform: translateY(-2px);
         }
+
         #instructions {
             position: absolute;
-            top: 20px;
+            top: 25px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px;
+            background: rgba(13, 13, 13, 0.8);
+            color: #e0d5be;
+            padding: 12px 24px;
+            border-radius: 2px;
+            font-family: 'Cinzel', serif;
+            font-size: 13px;
+            letter-spacing: 1.5px;
             z-index: 1000;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(6px);
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid #d4af37;
             pointer-events: none;
+        }
+
+        #status-display {
+            position: absolute;
+            top: 85px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: #c5a059;
+            text-transform: uppercase;
+            z-index: 1000;
+            pointer-events: none;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 12px;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
 
-    <div id="instructions">Apunta con la cámara al "Mapa Surrealista" de Leonora Carrington</div>
+    <div id="instructions">«La realidad no está ahí para ser creída, sino para ser creada»</div>
+    <div id="status-display">Apunta la cámara al Mapa Surrealista</div>
 
     <div id="ui-container">
-        <button class="ui-btn" id="play-btn">▶ Iniciar Secuencia Histórica</button>
-        <button class="ui-btn" id="reset-btn">Reiniciar</button>
+        <button class="carrington-btn" id="play-btn">Iniciar Viaje Alquímico</button>
+        <button class="carrington-btn" id="reset-btn" style="display:none;">Reiniciar</button>
     </div>
 
-    <!-- MindAR Scene Container -->
+    <!-- Escena MindAR optimizada para 2D Canvas / CSS Canvas -->
     <a-scene 
-        mindar-image="imageTargetSrc: #;" 
+        mindar-image="imageTargetSrc: ./targets/mapa_surrealista.mind; uiScanning: yes;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true" 
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
         
-        <a-assets>
-            <!-- Puedes reemplazar esta textura con la imagen binaria compilada de MindAR de tu mapa físico -->
-            <img id="map-texture" src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=80">
-        </a-assets>
-
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- Target Entity (Índice 0 del mapa físico) -->
-        <a-entity mindar-image-target="targetIndex: 0">
+        <!-- Target Entity asociado al índice 0 del mapa -->
+        <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
             
-            <!-- Plano base del mapa virtual superpuesto si se requiere ampliar el render -->
-            <a-plane position="0 0 0" rotation="0 0 0" width="1" height="0.75" material="src: #map-texture; transparent: true; opacity: 0.9;" shadow="cast: false; receive: true"></a-plane>
-
-            <!-- Contenedor de Animaciones y Cronología Interactiva -->
-            <a-entity id="chronology-container" position="0 0 0.02">
+            <!-- Contenedor general centrado sobre el plano físico del mapa -->
+            <a-entity id="chronology-canvas" position="0 0 0.01">
                 
-                <!-- Punto 1: Inglaterra (Nacimiento - Estrella pulsante) -->
+                <!-- Punto 1: Inglaterra - Estrella Alquímica Dorada -->
                 <a-entity id="step-1" position="-0.35 0.25 0" visible="false">
-                    <a-ring color="#FFD700" radius-inner="0.02" radius-outer="0.03" animation="property: scale; to: 1.5 1.5 1.5; dir: alternate; loop: true; dur: 800"></a-ring>
-                    <a-text value="1. Inglaterra (Nacimiento)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFD700"></a-text>
+                    <a-ring color="#d4af37" radius-inner="0.015" radius-outer="0.025" material="shader: flat; transparent: true; opacity: 0.9" animation="property: scale; to: 1.6 1.6 1.6; dir: alternate; loop: true; dur: 900"></a-ring>
+                    <a-text value="1. NACIMIENTO (Inglaterra)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#f0e6d2" font="exo2bold"></a-text>
                 </a-entity>
 
-                <!-- Trayecto y Punto 2-3: Viaje a Londres / Lápiz mágico -->
-                <a-entity id="step-3" position="-0.30 0.20 0" visible="false">
-                    <a-cylinder color="#A020F0" height="0.08" radius="0.005" rotation="0 0 45"></a-cylinder>
-                    <a-text value="3. Londres (Dibujo Mágico)" position="-0.05 0.05 0" scale="0.15 0.15 0.15" color="#DA70D6"></a-text>
+                <!-- Punto 2: Pulso hacia Florencia -->
+                <a-entity id="step-2" position="-0.28 0.20 0" visible="false">
+                    <a-circle color="#c5a059" radius="0.008" animation="property: opacity; from: 1; to: 0.2; dir: alternate; loop: true; dur: 400"></a-circle>
                 </a-entity>
 
-                <!-- Punto 4 y 5: París (Destello y Línea Rosa) -->
-                <a-entity id="step-5" position="-0.22 0.15 0" visible="false">
-                    <a-ring color="#FF69B4" radius-inner="0.015" radius-outer="0.025" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000"></a-ring>
-                    <a-text value="5. Paris (Surrealismo)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FF69B4"></a-text>
+                <!-- Punto 3: Londres - Trazado Mágico Vectorial -->
+                <a-entity id="step-3" position="-0.22 0.16 0" visible="false">
+                    <a-ring color="#da70d6" radius-inner="0.01" radius-outer="0.02" material="shader: flat"></a-ring>
+                    <a-text value="3. LONDRES (Dibujo Mágico)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#da70d6"></a-text>
                 </a-entity>
 
-                <!-- Punto 6: España (Cruz Roja) -->
-                <a-entity id="step-6" position="-0.15 0.05 0" visible="false">
-                    <a-box color="red" width="0.03" height="0.008" depth="0.001"></a-box>
-                    <a-box color="red" width="0.008" height="0.03" depth="0.001"></a-box>
-                    <a-text value="6. España (Internamiento)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FF0000"></a-text>
+                <!-- Punto 4: París - Destello de Partículas -->
+                <a-entity id="step-4" position="-0.16 0.12 0" visible="false">
+                    <a-ring color="#00ffff" radius-inner="0.02" radius-outer="0.022" animation="property: rotation; to: 0 360 0; loop: true; dur: 1500"></a-ring>
                 </a-entity>
 
-                <!-- Punto 7: Lisboa (Paloma Blanca) -->
-                <a-entity id="step-7" position="-0.08 0.02 0" visible="false">
-                    <a-sphere color="#FFFFFF" radius="0.015" animation="property: position; to: 0 0.02 0.02; dir: alternate; loop: true; dur: 1000"></a-sphere>
-                    <a-text value="7. Lisboa (Escape)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFFFFF"></a-text>
+                <!-- Punto 5: París - Vanguardia Surrealista -->
+                <a-entity id="step-5" position="-0.12 0.08 0" visible="false">
+                    <a-circle color="#ff69b4" radius="0.012" material="shader: flat"></a-circle>
+                    <a-text value="5. PARIS (Surrealismo)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ff69b4"></a-text>
                 </a-entity>
 
-                <!-- Punto 8: Nueva York (Espejito y Partículas) -->
-                <a-entity id="step-8" position="0.15 0.18 0" visible="false">
-                    <a-ring color="#00FFFF" radius-inner="0.02" radius-outer="0.025" material="side: double"></a-ring>
-                    <a-text value="8. Nueva York (Espejo)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#00FFFF"></a-text>
+                <!-- Punto 6: España - Cruz Roja de Internamiento -->
+                <a-entity id="step-6" position="-0.05 0.02 0" visible="false">
+                    <a-box color="#cc2929" width="0.025" height="0.006" depth="0.001"></a-box>
+                    <a-box color="#cc2929" width="0.006" height="0.025" depth="0.001"></a-box>
+                    <a-text value="6. ESPAÑA (Tránsito)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#cc2929"></a-text>
                 </a-entity>
 
-                <!-- Punto 9: México (Cactus Columnar y Huellas Verdes) -->
-                <a-entity id="step-9" position="0.25 -0.05 0" visible="false">
-                    <a-cylinder color="#2E8B57" height="0.04" radius="0.008"></a-cylinder>
-                    <a-text value="9. Mexico (Llegada)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#2E8B57"></a-text>
+                <!-- Punto 7: Lisboa - Paloma Blanca de Escape -->
+                <a-entity id="step-7" position="0.02 -0.02 0" visible="false">
+                    <a-ring color="#ffffff" radius-inner="0.005" radius-outer="0.018" animation="property: scale; to: 1.4 1.4 1.4; dir: alternate; loop: true; dur: 700"></a-ring>
+                    <a-text value="7. LISBOA (Escape)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ffffff"></a-text>
                 </a-entity>
 
-                <!-- Punto 10: Xilitla (Orquídea Rosa y Pétalos) -->
-                <a-entity id="step-10" position="0.28 -0.12 0" visible="false">
-                    <a-torus color="#FF1493" arc="270" radius="0.015" radius-tubular="0.003"></a-torus>
-                    <a-text value="10. Xilitla" position="-0.03 0.03 0" scale="0.15 0.15 0.15" color="#FF1493"></a-text>
+                <!-- Punto 8: Nueva York - Espejo Alquímico -->
+                <a-entity id="step-8" position="0.15 0.15 0" visible="false">
+                    <a-ring color="#00ffff" radius-inner="0.015" radius-outer="0.02" material="side: double"></a-ring>
+                    <a-text value="8. NUEVA YORK (Espejo)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#00ffff"></a-text>
                 </a-entity>
 
-                <!-- Punto 11 & 12: Nueva York y Chicago -->
-                <a-entity id="step-12" position="0.18 0.10 0" visible="false">
-                    <a-sphere color="#FFA500" radius="0.012"></a-sphere>
-                    <a-text value="11-12. NY & Chicago" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFA500"></a-text>
+                <!-- Punto 9: México - Cactus Columnar -->
+                <a-entity id="step-9" position="0.22 -0.05 0" visible="false">
+                    <a-cylinder color="#2e8b57" height="0.035" radius="0.006"></a-cylinder>
+                    <a-text value="9. MÉXICO (Llegada)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#2e8b57"></a-text>
                 </a-entity>
 
-                <!-- Punto Final: CDMX (Cruz Blanca / Fallecimiento) -->
-                <a-entity id="step-final" position="0.22 -0.02 0" visible="false">
-                    <a-box color="#FFFFFF" width="0.03" height="0.008" depth="0.001"></a-box>
-                    <a-box color="#FFFFFF" width="0.008" height="0.03" depth="0.001"></a-box>
-                    <a-text value="CDMX (Legado Eterno)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFFFFF"></a-text>
+                <!-- Punto 10: Xilitla - Orquídea Rosa -->
+                <a-entity id="step-10" position="0.27 -0.12 0" visible="false">
+                    <a-torus color="#ff1493" arc="270" radius="0.012" radius-tubular="0.002" animation="property: rotation; to: 0 0 360; loop: true; dur: 3000"></a-torus>
+                    <a-text value="10. XILITLA (Jardín Secreto)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ff1493"></a-text>
+                </a-entity>
+
+                <!-- Punto 11 & 12: NY y Chicago -->
+                <a-entity id="step-12" position="0.18 0.08 0" visible="false">
+                    <a-circle color="#ffa500" radius="0.01"></a-circle>
+                    <a-text value="11-12. NY & CHICAGO" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ffa500"></a-text>
+                </a-entity>
+
+                <!-- Punto Final: CDMX - Cruz Blanca del Legado -->
+                <a-entity id="step-final" position="0.20 -0.02 0" visible="false">
+                    <a-box color="#ffffff" width="0.03" height="0.007" depth="0.001"></a-box>
+                    <a-box color="#ffffff" width="0.007" height="0.03" depth="0.001"></a-box>
+                    <a-text value="CDMX (Legado Eterno)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ffffff"></a-text>
                 </a-entity>
 
             </a-entity>
@@ -165,44 +199,67 @@
         document.addEventListener("DOMContentLoaded", () => {
             const playBtn = document.getElementById("play-btn");
             const resetBtn = document.getElementById("reset-btn");
+            const statusDisplay = document.getElementById("status-display");
+            const targetEntity = document.getElementById("ar-target");
 
             const steps = [
-                document.getElementById("step-1"),
-                document.getElementById("step-3"),
-                document.getElementById("step-5"),
-                document.getElementById("step-6"),
-                document.getElementById("step-7"),
-                document.getElementById("step-8"),
-                document.getElementById("step-9"),
-                document.getElementById("step-10"),
-                document.getElementById("step-12"),
-                document.getElementById("step-final")
+                { el: document.getElementById("step-1"), label: "1. Nace en Lancashire, Inglaterra" },
+                { el: document.getElementById("step-2"), label: "2. Florencia y Galerías Uffizi" },
+                { el: document.getElementById("step-3"), label: "3. Londres: Academia Amédée Ozenfant" },
+                { el: document.getElementById("step-4"), label: "4. Viaje e integración a París" },
+                { el: document.getElementById("step-5"), label: "5. Saint-Martin d'Ardèche con Max Ernst" },
+                { el: document.getElementById("step-6"), label: "6. Hospital psiquiátrico en Santander" },
+                { el: document.getElementById("step-7"), label: "7. Lisboa: Escape y matrimonio con Renato Leduc" },
+                { el: document.getElementById("step-8"), label: "8. Nueva York: Círculo surrealista" },
+                { el: document.getElementById("step-9"), label: "9. México: Enlace con Remedios Varo" },
+                { el: document.getElementById("step-10"), label: "10. Xilitla junto a Edward James" },
+                { el: document.getElementById("step-12"), label: "11-12. Retornos a NY y Chicago" },
+                { el: document.getElementById("step-final"), label: "Legado Eterno - CDMX (2011)" }
             ];
 
-            let currentStep = 0;
-            let sequenceInterval = null;
+            let currentStepIndex = 0;
+            let sequenceTimer = null;
+            let isTracking = false;
+
+            targetEntity.addEventListener("targetFound", () => {
+                isTracking = true;
+                statusDisplay.textContent = "Mapa Detectado • Listo para Reproducir";
+                statusDisplay.style.color = "#d4af37";
+            });
+
+            targetEntity.addEventListener("targetLost", () => {
+                isTracking = false;
+                statusDisplay.textContent = "Buscando Mapa Surrealista...";
+                statusDisplay.style.color = "#888888";
+            });
 
             playBtn.addEventListener("click", () => {
                 playBtn.style.display = "none";
-                runSequence();
+                resetBtn.style.display = "block";
+                currentStepIndex = 0;
+                runChronology();
             });
 
             resetBtn.addEventListener("click", () => {
-                if (sequenceInterval) clearInterval(sequenceInterval);
-                steps.forEach(s => s.setAttribute("visible", "false"));
-                currentStep = 0;
+                if (sequenceTimer) clearTimeout(sequenceTimer);
+                steps.forEach(s => s.el.setAttribute("visible", "false"));
+                currentStepIndex = 0;
                 playBtn.style.display = "block";
+                resetBtn.style.display = "none";
+                statusDisplay.textContent = isTracking ? "Mapa Detectado • Listo para Reproducir" : "Buscando Mapa Surrealista...";
             });
 
-            function runSequence() {
-                if (currentStep < steps.length) {
-                    steps[currentStep].setAttribute("visible", "true");
-                    currentStep++;
-                    sequenceInterval = setTimeout(runSequence, 1200);
+            function runChronology() {
+                if (currentStepIndex < steps.length) {
+                    // Ocultar anterior opcionalmente o mantener rastro acumulativo
+                    steps[currentStepIndex].el.setAttribute("visible", "true");
+                    statusDisplay.textContent = steps[currentStepIndex].label;
+                    currentStepIndex++;
+                    sequenceTimer = setTimeout(runChronology, 1400);
                 } else {
+                    statusDisplay.textContent = "Secuencia Alquímica Concluida";
                     playBtn.style.display = "block";
-                    playBtn.textContent = "▶ Reproducir de Nuevo";
-                    currentStep = 0;
+                    playBtn.textContent = "Repetir Ciclo";
                 }
             }
         });
