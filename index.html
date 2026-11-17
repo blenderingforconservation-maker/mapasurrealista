@@ -3,16 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Mapa Surrealista 1929 — WebAR Museo Leonora Carrington</title>
+  <title>Mapa Surrealista 1929 — WebAR Image Tracking</title>
 
-  <!-- Motor 3D Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Arquitectura Oficial ES Modules: Three.js r160 + MindAR 1.2.5 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
 
   <style>
     :root {
       --bg-glass: rgba(16, 15, 13, 0.82);
       --bg-glass-strong: rgba(12, 11, 10, 0.92);
-      --border-gold: rgba(230, 194, 122, 0.32);
+      --border-gold: rgba(230, 194, 122, 0.35);
       --accent-gold: #e6c27a;
       --text-cream: #f6f2e9;
       --text-muted: #b8b0a0;
@@ -32,18 +40,38 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #0b0b0a;
+      background-color: transparent;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: var(--text-cream);
     }
 
-    /* Cuando el AR está activo, el fondo del documento es transparente para no tapar el video */
-    body.ar-mode-active {
-      background-color: transparent;
+    /* =========================================================
+       1. CONTENEDOR NATIVO MINDAR (6DoF IMAGE TRACKING)
+       Siempre con dimensiones reales (100vw x 100vh) para que el
+       motor de visión por computadora calcule la matriz exacta.
+       ========================================================= */
+    #ar-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 1;
+      background: #000;
+    }
+
+    /* Garantiza que el video de MindAR (que por defecto usa z-index: -2)
+       sea visible y que el canvas WebGL se superponga con registro exacto */
+    #ar-container video {
+      z-index: 1 !important;
+    }
+
+    #ar-container canvas {
+      z-index: 2 !important;
     }
 
     /* =========================================================
-       1. MODAL DE BIENVENIDA MUSEOGRÁFICO
+       2. PANTALLA DE BIENVENIDA MUSEOGRÁFICA
        ========================================================= */
     #welcome-screen {
       position: fixed;
@@ -56,7 +84,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      transition: opacity 0.45s ease, visibility 0.45s ease;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
     }
 
     #welcome-screen.hidden {
@@ -132,7 +160,7 @@
       gap: 10px;
       box-shadow: 0 10px 28px rgba(212, 155, 56, 0.35);
       margin-bottom: 12px;
-      transition: transform 0.15s ease, filter 0.2s ease;
+      transition: transform 0.15s ease;
     }
 
     .btn-primary-ar:active {
@@ -149,49 +177,10 @@
       font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s ease;
-    }
-
-    .btn-secondary-2d:active {
-      background: rgba(255, 255, 255, 0.12);
     }
 
     /* =========================================================
-       2. ESCENARIO CÁMARA WEBAR + LIENZO 3D FLOTANTE
-       ========================================================= */
-    #ar-stage {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 1;
-      display: none;
-      overflow: hidden;
-      background: #000;
-    }
-
-    /* Video nativo de la cámara trasera con visibilidad garantizada */
-    #ar-camera-video {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: 1;
-    }
-
-    /* Capa 3D transparente sobre el video de la cámara */
-    #ar-webgl-container {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 2;
-      touch-action: none;
-    }
-
-    /* =========================================================
-       3. RETÍCULA DE ESCANEO AR (MIRA LÁSER)
+       3. RETÍCULA DE ESCANEO (SE OCULTA AL RECONOCER EL TARGET)
        ========================================================= */
     #scan-overlay {
       position: fixed;
@@ -202,8 +191,8 @@
       align-items: center;
       justify-content: center;
       pointer-events: none;
-      padding-bottom: 80px;
-      transition: opacity 0.35s ease;
+      padding-bottom: 90px;
+      transition: opacity 0.3s ease;
     }
 
     .reticle-box {
@@ -211,15 +200,13 @@
       width: min(80vw, 360px);
       aspect-ratio: 4 / 3;
       border-radius: 18px;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.42);
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
 
-    /* Esquinas del visor */
     .corner {
       position: absolute;
       width: 28px;
@@ -233,7 +220,6 @@
     .corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 14px; }
     .corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 14px; }
 
-    /* Línea láser de escaneo */
     .laser-line {
       position: absolute;
       left: 8%;
@@ -259,17 +245,16 @@
       border-radius: 999px;
       font-size: 0.84rem;
       font-weight: 600;
-      letter-spacing: 0.3px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     }
 
     /* =========================================================
-       4. ESCENARIO 2D INTERACTIVO (MODO PANTALLA COMPLETA)
+       4. MODO 2D DE RESPALDO
        ========================================================= */
     #map-2d-stage {
       position: fixed;
       inset: 0;
-      z-index: 5;
+      z-index: 10;
       display: none;
       align-items: center;
       justify-content: center;
@@ -302,7 +287,7 @@
     }
 
     /* =========================================================
-       5. BARRA SUPERIOR (HUD TOP)
+       5. BARRA SUPERIOR Y CONTROLES INFERIORES (HUD UI/UX)
        ========================================================= */
     .hud-top {
       position: fixed;
@@ -338,23 +323,13 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #4ade80;
-      box-shadow: 0 0 8px #4ade80;
-      animation: blinkDot 1.8s infinite;
-    }
-
-    @keyframes blinkDot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
-    }
-
-    .top-btn-group {
-      display: flex;
-      gap: 8px;
-      pointer-events: auto;
+      background: #f59e0b;
+      box-shadow: 0 0 8px currentColor;
+      transition: background 0.3s ease;
     }
 
     .hud-chip-btn {
+      pointer-events: auto;
       background: var(--bg-glass);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
@@ -365,17 +340,9 @@
       font-size: 0.78rem;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 0.15s ease, background 0.2s ease;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
     }
 
-    .hud-chip-btn:active {
-      transform: scale(0.94);
-    }
-
-    /* =========================================================
-       6. DOCK INFERIOR UI/UX CON SCRUBBER DE 13 DESTINOS
-       ========================================================= */
     .hud-bottom-dock {
       position: fixed;
       bottom: max(14px, var(--safe-bottom));
@@ -393,9 +360,9 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      transition: opacity 0.3s ease;
     }
 
-    /* Barra de 13 nodos interactivos */
     .timeline-scrubber {
       display: flex;
       align-items: center;
@@ -442,7 +409,6 @@
       color: #ffffff;
     }
 
-    /* Fila principal de controles */
     .dock-main-row {
       display: flex;
       align-items: center;
@@ -459,19 +425,7 @@
       font-size: 0.86rem;
       font-weight: 700;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
       flex-shrink: 0;
-    }
-
-    .nav-pill-btn:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .nav-pill-btn:active:not(:disabled) {
-      transform: scale(0.95);
     }
 
     .nav-pill-btn:disabled {
@@ -482,12 +436,11 @@
     .destination-center {
       flex: 1;
       display: flex;
-       flex-direction: column;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       padding: 2px 6px;
-      border-radius: 10px;
     }
 
     .dest-meta {
@@ -520,7 +473,6 @@
       text-align: center;
     }
 
-    /* Imagen fuente oculta */
     #source-map-img {
       display: none;
     }
@@ -528,40 +480,40 @@
 </head>
 <body>
 
-  <!-- Imagen base en la carpeta target/ del repositorio -->
+  <!-- Textura fuente desde tu carpeta target/ -->
   <img id="source-map-img" src="./target/mapa_surrealista.jpg" crossorigin="anonymous" alt="Mapa Surrealista" />
 
-  <!-- 1. PANTALLA DE BIENVENIDA -->
+  <!-- 1. CONTENEDOR WEBAR (MINDAR + THREE.JS) -->
+  <div id="ar-container"></div>
+
+  <!-- 2. PANTALLA DE BIENVENIDA -->
   <div id="welcome-screen">
     <div class="welcome-card">
-      <span class="museum-tag">Experiencia Interactiva WebAR</span>
+      <span class="museum-tag">Museo Leonora Carrington</span>
       <h1 class="welcome-title">Mapa Surrealista (1929)</h1>
-      <div class="welcome-author">Leonora Carrington</div>
+      <div class="welcome-author">Reconocimiento Espacial WebAR</div>
       <p class="welcome-desc">
-        Apunta la cámara de tu teléfono hacia el mapa de la sala para desplegar el lienzo flotante en 3D y recorrer los 13 destinos con pulsos cromáticos.
+        Apunta la cámara de tu teléfono hacia el mapa físico de la sala. Al reconocerlo, el mapa limpio y sus 13 recorridos emergerán anclados en Realidad Aumentada.
       </p>
       <button class="btn-primary-ar" id="start-ar-btn">
-        <span>📷</span> Activar Cámara AR
+        <span>📷</span> Escanear Mapa en Sala (AR)
       </button>
       <button class="btn-secondary-2d" id="start-2d-btn">
-        🗺️ Explorar en Modo Pantalla (2D)
+        🗺️ Abrir Vista Interactiva 2D
       </button>
     </div>
   </div>
 
-  <!-- 2. BARRA SUPERIOR HUD -->
+  <!-- 3. BARRA SUPERIOR -->
   <div class="hud-top">
     <div class="status-chip">
       <span class="live-indicator" id="live-dot"></span>
-      <span id="status-text">Listo para iniciar</span>
+      <span id="status-text">Esperando inicio...</span>
     </div>
-    <div class="top-btn-group">
-      <button class="hud-chip-btn" id="rescan-btn" style="display: none;">🎯 Re-enfocar</button>
-      <button class="hud-chip-btn" id="switch-mode-btn">Vista 2D</button>
-    </div>
+    <button class="hud-chip-btn" id="switch-mode-btn">Vista 2D</button>
   </div>
 
-  <!-- 3. RETÍCULA DE ESCANEO LÁSER -->
+  <!-- 4. RETÍCULA DE ESCANEO (SOLO VISIBLE MIENTRAS BUSCA EL TARGET) -->
   <div id="scan-overlay">
     <div class="reticle-box">
       <div class="corner tl"></div>
@@ -571,17 +523,11 @@
       <div class="laser-line"></div>
     </div>
     <div class="scan-hint-pill" id="scan-hint-text">
-      Apunta hacia el Mapa Surrealista...
+      Encuadra el Mapa Surrealista para activar el seguimiento AR
     </div>
   </div>
 
-  <!-- 4. ESCENARIO CÁMARA AR + 3D FLOTANTE -->
-  <div id="ar-stage">
-    <video id="ar-camera-video" autoplay playsinline muted></video>
-    <div id="ar-webgl-container"></div>
-  </div>
-
-  <!-- 5. ESCENARIO 2D INTERACTIVO -->
+  <!-- 5. ESCENARIO 2D DE RESPALDO -->
   <div id="map-2d-stage">
     <div id="map-2d-wrapper">
       <canvas id="clean-map-canvas" width="1600" height="1200"></canvas>
@@ -589,15 +535,14 @@
     </div>
   </div>
 
-  <!-- 6. DOCK INFERIOR CON LÍNEA DE TIEMPO Y BOTONES -->
-  <div class="hud-bottom-dock">
+  <!-- 6. CONTROLES DE LOS 13 SUCESOS -->
+  <div class="hud-bottom-dock" id="bottom-dock">
     <div class="timeline-scrubber" id="timeline-scrubber">
       <div class="timeline-track-line"></div>
-      <!-- Los 13 nodos se generan dinámicamente -->
     </div>
     <div class="dock-main-row">
       <button class="nav-pill-btn" id="prev-btn" disabled>⬅ Atrás</button>
-      <div class="destination-center" id="replay-btn" title="Toca para repetir la animación del trayecto">
+      <div class="destination-center" id="replay-btn" title="Toca para repetir el trayecto">
         <span class="dest-meta" id="dest-counter">Destino 1 de 13 ↻</span>
         <div class="dest-title-wrap">
           <span class="dest-color-orb" id="color-dot"></span>
@@ -608,10 +553,13 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { MindARThree } from 'mindar-image-three';
+
     /**
-     * 13 Destinos de la cronología de Leonora Carrington con curvas Bézier cúbicas (cp1, cp2)
-     * y el color cromático de cada punto en el mapa.
+     * Coordenadas normalizadas (0.0 a 1.0) de los 13 destinos sobre mapa_surrealista.jpg
+     * con puntos de control Bézier cúbicos (cp1, cp2) y colores originales.
      */
     const CHRONOLOGY = [
       { id: 1,  city: "Lancashire",             x: 0.089, y: 0.412, color: "#e64833" },
@@ -672,17 +620,12 @@
     const overlayCanvas = document.getElementById("overlay-canvas");
     const ctx = overlayCanvas.getContext("2d", { alpha: true });
 
+    const arContainer = document.getElementById("ar-container");
     const welcomeScreen = document.getElementById("welcome-screen");
     const startArBtn = document.getElementById("start-ar-btn");
     const start2dBtn = document.getElementById("start-2d-btn");
     const switchModeBtn = document.getElementById("switch-mode-btn");
-    const rescanBtn = document.getElementById("rescan-btn");
     const scanOverlay = document.getElementById("scan-overlay");
-    const scanHintText = document.getElementById("scan-hint-text");
-
-    const arStage = document.getElementById("ar-stage");
-    const arVideo = document.getElementById("ar-camera-video");
-    const arWebglContainer = document.getElementById("ar-webgl-container");
     const map2dStage = document.getElementById("map-2d-stage");
 
     const statusText = document.getElementById("status-text");
@@ -705,22 +648,15 @@
     const IDLE_FRAME_INTERVAL = 1000 / 30;
     const DURATION = 1350;
 
-    // Estado de Cámara AR y Escena 3D Flotante
-    let arActive = false;
-    let mediaStream = null;
-    let threeRenderer = null;
-    let threeScene = null;
-    let threeCamera = null;
-    let floatingGroup = null;
+    // Estado WebAR (MindARThree)
+    let mindarThree = null;
+    let arRunning = false;
+    let targetTracked = false;
     let arCleanMapTexture = null;
     let arAnimTexture = null;
-    let mapRevealed = false;
-    let targetScale = 0;
-    let currentScale = 0;
-    let targetRotX = 0;
-    let targetRotY = 0;
+    let floatingAssembly = null;
 
-    // Crear los 13 nodos interactivos en el dock inferior
+    // Construir los 13 botones de la línea de tiempo
     const stepNodes = [];
     CHRONOLOGY.forEach((item, idx) => {
       const node = document.createElement("button");
@@ -739,9 +675,6 @@
       stepNodes.push(node);
     });
 
-    /**
-     * Dibuja un rectángulo con esquinas redondeadas compatible con el 100% de navegadores móviles
-     */
     function fillRoundedRect(context, x, y, w, h, r) {
       context.beginPath();
       context.moveTo(x + r, y);
@@ -758,52 +691,44 @@
     }
 
     /**
-     * Prepara el Mapa Limpio Flotante ocultando la lista de los 13 textos históricos inferiores
+     * Genera el lienzo del Mapa Flotante Limpio ocultando el listado de los 13 textos inferiores
      */
     async function buildCleanFloatingMap() {
-      try {
-        if (!sourceImg.complete) {
-          await new Promise((res) => {
-            sourceImg.onload = res;
-            sourceImg.onerror = res;
-          });
-        }
+      if (!sourceImg.complete) {
+        await new Promise((res) => {
+          sourceImg.onload = res;
+          sourceImg.onerror = res;
+        });
+      }
 
-        const w = cleanMapCanvas.width;
-        const h = cleanMapCanvas.height;
-        cleanCtx.clearRect(0, 0, w, h);
+      const w = cleanMapCanvas.width;
+      const h = cleanMapCanvas.height;
+      cleanCtx.clearRect(0, 0, w, h);
 
-        if (sourceImg.naturalWidth > 0) {
-          cleanCtx.drawImage(sourceImg, 0, 0, w, h);
+      if (sourceImg.naturalWidth > 0) {
+        cleanCtx.drawImage(sourceImg, 0, 0, w, h);
 
-          // Parche mimetizado con el tono del papel para ocultar los 13 textos inferiores
-          const patchX = w * 0.055;
-          const patchY = h * 0.702;
-          const patchW = w * 0.50;
-          const patchH = h * 0.265;
+        const patchX = w * 0.055;
+        const patchY = h * 0.702;
+        const patchW = w * 0.50;
+        const patchH = h * 0.265;
 
-          const paperGrad = cleanCtx.createLinearGradient(patchX, patchY, patchX + patchW, patchY + patchH);
-          paperGrad.addColorStop(0, "rgba(153, 151, 142, 0.97)");
-          paperGrad.addColorStop(0.5, "rgba(159, 157, 148, 0.99)");
-          paperGrad.addColorStop(1, "rgba(148, 146, 137, 0.97)");
+        const paperGrad = cleanCtx.createLinearGradient(patchX, patchY, patchX + patchW, patchY + patchH);
+        paperGrad.addColorStop(0, "rgba(153, 151, 142, 0.97)");
+        paperGrad.addColorStop(0.5, "rgba(159, 157, 148, 0.99)");
+        paperGrad.addColorStop(1, "rgba(148, 146, 137, 0.97)");
 
-          cleanCtx.save();
-          cleanCtx.fillStyle = paperGrad;
-          fillRoundedRect(cleanCtx, patchX, patchY, patchW, patchH, 16);
-          cleanCtx.restore();
-        }
+        cleanCtx.save();
+        cleanCtx.fillStyle = paperGrad;
+        fillRoundedRect(cleanCtx, patchX, patchY, patchW, patchH, 16);
+        cleanCtx.restore();
+      }
 
-        if (arCleanMapTexture) {
-          arCleanMapTexture.needsUpdate = true;
-        }
-      } catch (e) {
-        console.warn("Aviso al preparar lienzo limpio:", e);
+      if (arCleanMapTexture) {
+        arCleanMapTexture.needsUpdate = true;
       }
     }
 
-    /**
-     * Evaluador de Curva Bézier Cúbica
-     */
     function getCubicBezierPoint(p0, p1, p2, p3, t) {
       const u = 1 - t;
       const tt = t * t;
@@ -857,214 +782,168 @@
     }
 
     /**
-     * Inicializa la Escena 3D Flotante sobre el video real de la cámara
-     */
-    function initFloating3DScene() {
-      if (threeRenderer) return;
-
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-
-      threeScene = new THREE.Scene();
-      threeCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-      threeCamera.position.set(0, 0, 2.35);
-
-      threeRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
-      threeRenderer.setSize(width, height);
-      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      arWebglContainer.innerHTML = "";
-      arWebglContainer.appendChild(threeRenderer.domElement);
-
-      floatingGroup = new THREE.Group();
-      threeScene.add(floatingGroup);
-
-      const aspect = overlayCanvas.height / overlayCanvas.width; // 0.75 (4:3)
-      const planeW = 1.55;
-      const planeH = planeW * aspect;
-
-      // 1. Sombra suave proyectada detrás del mapa flotante
-      const shadowGeo = new THREE.PlaneGeometry(planeW * 1.05, planeH * 1.05);
-      const shadowMat = new THREE.MeshBasicMaterial({
-        color: 0x000000,
-        transparent: true,
-        opacity: 0.52,
-        depthWrite: false
-      });
-      const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
-      shadowMesh.position.set(0, -0.03, -0.04);
-      floatingGroup.add(shadowMesh);
-
-      // 2. Marco dorado museográfico sutil alrededor del mapa flotante
-      const borderGeo = new THREE.PlaneGeometry(planeW * 1.018, planeH * 1.022);
-      const borderMat = new THREE.MeshBasicMaterial({
-        color: 0xe6c27a,
-        transparent: true,
-        opacity: 0.65
-      });
-      const borderMesh = new THREE.Mesh(borderGeo, borderMat);
-      borderMesh.position.set(0, 0, -0.005);
-      floatingGroup.add(borderMesh);
-
-      // 3. Plano del Mapa Limpio Flotante (cubre las líneas/textos inferiores)
-      arCleanMapTexture = new THREE.CanvasTexture(cleanMapCanvas);
-      arCleanMapTexture.minFilter = THREE.LinearFilter;
-      arCleanMapTexture.magFilter = THREE.LinearFilter;
-
-      const mapGeo = new THREE.PlaneGeometry(planeW, planeH);
-      const mapMat = new THREE.MeshBasicMaterial({ map: arCleanMapTexture });
-      const mapMesh = new THREE.Mesh(mapGeo, mapMat);
-      mapMesh.position.set(0, 0, 0);
-      floatingGroup.add(mapMesh);
-
-      // 4. Plano Transparente Elevado (Z = +0.045) con las rutas punteadas y pulsos en relieve 3D
-      arAnimTexture = new THREE.CanvasTexture(overlayCanvas);
-      arAnimTexture.minFilter = THREE.LinearFilter;
-      arAnimTexture.magFilter = THREE.LinearFilter;
-      arAnimTexture.generateMipmaps = false;
-
-      const animGeo = new THREE.PlaneGeometry(planeW, planeH);
-      const animMat = new THREE.MeshBasicMaterial({
-        map: arAnimTexture,
-        transparent: true,
-        depthWrite: false
-      });
-      const animMesh = new THREE.Mesh(animGeo, animMat);
-      animMesh.position.set(0, 0, 0.045);
-      floatingGroup.add(animMesh);
-
-      // Interacción táctil y de giroscopio para inclinar el mapa flotante en 3D
-      window.addEventListener("pointermove", (e) => {
-        if (!arActive) return;
-        const nx = (e.clientX / window.innerWidth) - 0.5;
-        const ny = (e.clientY / window.innerHeight) - 0.5;
-        targetRotY = nx * 0.28;
-        targetRotX = ny * 0.22;
-      });
-
-      window.addEventListener("deviceorientation", (e) => {
-        if (!arActive || e.gamma === null || e.beta === null) return;
-        const gx = Math.max(-25, Math.min(25, e.gamma)) / 25;
-        const gy = Math.max(-25, Math.min(25, e.beta - 45)) / 25;
-        targetRotY = gx * 0.22;
-        targetRotX = gy * 0.18;
-      });
-
-      window.addEventListener("resize", updateCameraResponsiveness);
-      updateCameraResponsiveness();
-    }
-
-    function updateCameraResponsiveness() {
-      if (!threeRenderer || !threeCamera) return;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      threeCamera.aspect = w / h;
-      // Ajusta la distancia de la cámara 3D en pantallas verticales (teléfonos) vs horizontales
-      threeCamera.position.z = (w < h) ? 3.15 : 2.15;
-      threeCamera.updateProjectionMatrix();
-      threeRenderer.setSize(w, h);
-    }
-
-    /**
-     * Dispara el escaneo visual y despliega el Mapa Flotante 3D sobre la cámara
-     */
-    function triggerMapScanSequence() {
-      mapRevealed = false;
-      currentScale = 0.01;
-      targetScale = 0;
-      scanOverlay.style.display = "flex";
-      scanOverlay.style.opacity = "1";
-      scanHintText.textContent = "Reconociendo Mapa Surrealista...";
-      statusText.textContent = "Escaneando mural...";
-
-      setTimeout(() => {
-        if (!arActive) return;
-        scanHintText.textContent = "✨ ¡Mapa detectado! Desplegando lienzo 3D...";
-      }, 900);
-
-      setTimeout(() => {
-        if (!arActive) return;
-        mapRevealed = true;
-        targetScale = 1;
-        scanOverlay.style.opacity = "0";
-        setTimeout(() => {
-          if (mapRevealed) scanOverlay.style.display = "none";
-        }, 350);
-        statusText.textContent = "AR Flotante Activo — Usa Atrás / Adelante";
-        // Re-dispara la animación del punto actual al emerger el mapa
-        const origin = currentIndex > 0 ? currentIndex - 1 : null;
-        updateLocation(currentIndex, origin);
-      }, 1550);
-    }
-
-    /**
-     * SOLUCIÓN DEFINITIVA DE CÁMARA:
-     * Solicita el stream de video directamente en el gesto del clic, garantizando
-     * compatibilidad en iOS Safari y Chrome Android sin bloqueos.
+     * Inicializa y arranca el seguimiento de imagen real (MindARThree)
+     * cargando ./target/mapa_surrealista.mind desde tu repositorio.
      */
     async function startARExperience() {
       welcomeScreen.classList.add("hidden");
-      document.body.classList.add("ar-mode-active");
       map2dStage.style.display = "none";
-      arStage.style.display = "block";
-      statusText.textContent = "Encendiendo cámara...";
+      arContainer.style.display = "block";
+      scanOverlay.style.display = "flex";
+      scanOverlay.style.opacity = "1";
+      statusText.textContent = "Cargando mapa_surrealista.mind...";
+      liveDot.style.background = "#f59e0b";
 
       try {
-        // 1. Solicitar la cámara trasera inmediatamente dentro del clic del usuario
-        if (!mediaStream) {
-          const constraints = {
-            audio: false,
-            video: {
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
+        await buildCleanFloatingMap();
+
+        if (!mindarThree) {
+          mindarThree = new MindARThree({
+            container: arContainer,
+            imageTargetSrc: "./target/mapa_surrealista.mind",
+            uiLoading: "no",
+            uiScanning: "no",
+            uiError: "no",
+            filterMinCF: 0.001,
+            filterBeta: 0.005,
+            warmupTolerance: 3,
+            missTolerance: 5
+          });
+
+          const { renderer, scene, camera } = mindarThree;
+          const anchor = mindarThree.addAnchor(0);
+
+          // Grupo que contiene las capas flotantes ancladas al target físico
+          floatingAssembly = new THREE.Group();
+          anchor.group.add(floatingAssembly);
+
+          const aspect = overlayCanvas.height / overlayCanvas.width; // 0.75 (4:3)
+
+          // CAPA 0 (Z = 0.01): Sombra trasera proyectada sobre el mapa físico de la pared
+          const shadowGeo = new THREE.PlaneGeometry(1.06, aspect * 1.06);
+          const shadowMat = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.55,
+            depthWrite: false
+          });
+          const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+          shadowMesh.position.set(0, -0.018, 0.01);
+          floatingAssembly.add(shadowMesh);
+
+          // CAPA 1 (Z = 0.042): Marco dorado fino alrededor del mapa flotante
+          const frameGeo = new THREE.PlaneGeometry(1.03, aspect * 1.03);
+          const frameMat = new THREE.MeshBasicMaterial({
+            color: 0xe6c27a,
+            transparent: true,
+            opacity: 0.8
+          });
+          const frameMesh = new THREE.Mesh(frameGeo, frameMat);
+          frameMesh.position.set(0, 0, 0.042);
+          floatingAssembly.add(frameMesh);
+
+          // CAPA 2 (Z = 0.045): Mapa Limpio Flotante (oculta las líneas/textos del mural físico)
+          arCleanMapTexture = new THREE.CanvasTexture(cleanMapCanvas);
+          arCleanMapTexture.colorSpace = THREE.SRGBColorSpace;
+          arCleanMapTexture.minFilter = THREE.LinearFilter;
+          arCleanMapTexture.magFilter = THREE.LinearFilter;
+
+          const cleanMapGeo = new THREE.PlaneGeometry(1.015, aspect * 1.015);
+          const cleanMapMat = new THREE.MeshBasicMaterial({
+            map: arCleanMapTexture
+          });
+          const cleanMapMesh = new THREE.Mesh(cleanMapGeo, cleanMapMat);
+          cleanMapMesh.position.set(0, 0, 0.045);
+          floatingAssembly.add(cleanMapMesh);
+
+          // CAPA 3 (Z = 0.095): Capa de Animación (trayectos punteados y pulsos en relieve 3D)
+          arAnimTexture = new THREE.CanvasTexture(overlayCanvas);
+          arAnimTexture.colorSpace = THREE.SRGBColorSpace;
+          arAnimTexture.minFilter = THREE.LinearFilter;
+          arAnimTexture.magFilter = THREE.LinearFilter;
+          arAnimTexture.generateMipmaps = false;
+
+          const animGeo = new THREE.PlaneGeometry(1.015, aspect * 1.015);
+          const animMat = new THREE.MeshBasicMaterial({
+            map: arAnimTexture,
+            transparent: true,
+            depthWrite: false
+          });
+          const animMesh = new THREE.Mesh(animGeo, animMat);
+          animMesh.position.set(0, 0, 0.095);
+          floatingAssembly.add(animMesh);
+
+          // Eventos de reconocimiento espacial en tiempo real
+          anchor.onTargetFound = () => {
+            targetTracked = true;
+            scanOverlay.style.opacity = "0";
+            setTimeout(() => {
+              if (targetTracked) scanOverlay.style.display = "none";
+            }, 280);
+            liveDot.style.background = "#4ade80";
+            statusText.textContent = "Mapa Reconocido — Seguimiento AR Activo";
+
+            // Reinicia el trayecto actual para que el visitante vea la animación al detectar el mapa
+            const origin = currentIndex > 0 ? currentIndex - 1 : null;
+            updateLocation(currentIndex, origin);
           };
-          mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-          arVideo.srcObject = mediaStream;
-          await arVideo.play();
+
+          anchor.onTargetLost = () => {
+            targetTracked = false;
+            scanOverlay.style.display = "flex";
+            requestAnimationFrame(() => { scanOverlay.style.opacity = "1"; });
+            liveDot.style.background = "#f59e0b";
+            statusText.textContent = "Apunta al Mapa Surrealista de la sala";
+          };
+
+          await mindarThree.start();
+
+          renderer.setAnimationLoop(() => {
+            if (targetTracked && floatingAssembly) {
+              // Levitación sutil sobre el eje Z respecto al mural físico
+              const t = performance.now() * 0.002;
+              floatingAssembly.position.z = Math.sin(t) * 0.008;
+            }
+            renderer.render(scene, camera);
+          });
+        } else {
+          await mindarThree.start();
         }
 
-        // 2. Preparar el mapa limpio y la escena 3D flotante
-        await buildCleanFloatingMap();
-        initFloating3DScene();
-
-        arActive = true;
-        liveDot.style.background = "#4ade80";
-        rescanBtn.style.display = "inline-block";
+        arRunning = true;
         switchModeBtn.textContent = "🗺️ Vista 2D";
-
-        // 3. Ejecutar la secuencia de reconocimiento y despliegue del mapa flotante
-        triggerMapScanSequence();
+        statusText.textContent = "Apunta al Mapa Surrealista de la sala";
       } catch (err) {
-        console.error("Error de acceso a cámara:", err);
-        liveDot.style.background = "#f59e0b";
-        open2DMode("Permiso de cámara denegado — Modo 2D");
+        console.error("Error al iniciar MindAR:", err);
+        open2DMode("Sin acceso a cámara — Modo 2D Activo");
       }
     }
 
-    async function open2DMode(customMessage = "Modo Interactivo 2D") {
+    async function open2DMode(customStatus = "Modo Interactivo 2D") {
       welcomeScreen.classList.add("hidden");
-      document.body.classList.remove("ar-mode-active");
-
-      arActive = false;
+      if (mindarThree && arRunning) {
+        mindarThree.stop();
+      }
+      arRunning = false;
+      targetTracked = false;
       scanOverlay.style.display = "none";
-      rescanBtn.style.display = "none";
-      arStage.style.display = "none";
+      arContainer.style.display = "none";
 
       await buildCleanFloatingMap();
       map2dStage.style.display = "flex";
+      liveDot.style.background = "#38bdf8";
       switchModeBtn.textContent = "📷 Cámara AR";
-      statusText.textContent = customMessage;
+      statusText.textContent = customStatus;
     }
 
     /**
-     * Bucle principal de renderizado (2D + 3D Flotante)
+     * Bucle de dibujo 2D para las trayectorias punteadas y pulsos cromáticos
      */
-    function render(time) {
-      requestAnimationFrame(render);
+    function renderCanvasOverlay(time) {
+      requestAnimationFrame(renderCanvasOverlay);
       if (document.hidden) return;
 
-      const highFreqNeeded = isTraveling || particles.length > 0 || arActive;
+      const highFreqNeeded = isTraveling || particles.length > 0 || targetTracked;
       if (!highFreqNeeded && (time - lastRenderTime < IDLE_FRAME_INTERVAL)) {
         return;
       }
@@ -1103,7 +982,6 @@
         ctx.shadowBlur = 18;
         ctx.stroke();
 
-        // Núcleo blanco de alto contraste
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 2.2;
         ctx.stroke();
@@ -1125,7 +1003,7 @@
         }
       }
 
-      // 2. Partículas cromáticas al llegar al destino
+      // 2. Partículas de llegada
       if (particles.length > 0) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
@@ -1152,7 +1030,7 @@
         ctx.restore();
       }
 
-      // 3. Pulso de brillo del color de la ciudad actual
+      // 3. Pulso de brillo cromático en la ciudad destino
       const cx = current.x * overlayCanvas.width;
       const cy = current.y * overlayCanvas.height;
       const beat = 0.5 + 0.5 * Math.sin(time * 0.0055);
@@ -1202,28 +1080,11 @@
       ctx.fillText(String(current.id), cx, cy + 1);
       ctx.restore();
 
-      // 4. Actualizar escena 3D flotante si estamos en modo Cámara AR
-      if (arActive && threeRenderer && floatingGroup) {
-        if (arAnimTexture) arAnimTexture.needsUpdate = true;
-
-        // Interpolación suave de aparición y levitación 3D
-        currentScale += (targetScale - currentScale) * 0.1;
-        floatingGroup.scale.set(currentScale, currentScale, currentScale);
-
-        const floatY = Math.sin(time * 0.0022) * 0.025;
-        const floatZ = Math.cos(time * 0.0018) * 0.015;
-        floatingGroup.position.set(0, floatY, floatZ);
-
-        floatingGroup.rotation.x += (targetRotX - floatingGroup.rotation.x) * 0.08;
-        floatingGroup.rotation.y += (targetRotY - floatingGroup.rotation.y) * 0.08;
-
-        threeRenderer.render(threeScene, threeCamera);
+      if (arAnimTexture) {
+        arAnimTexture.needsUpdate = true;
       }
     }
 
-    /**
-     * Actualiza el destino activo y sincroniza el scrubber de 13 nodos
-     */
     function updateLocation(newIndex, originIndex = currentIndex) {
       previousIndex = originIndex;
       currentIndex = newIndex;
@@ -1243,7 +1104,6 @@
       prevBtn.disabled = currentIndex === 0;
       nextBtn.disabled = currentIndex === CHRONOLOGY.length - 1;
 
-      // Actualizar colores y estado de los 13 nodos de la línea de tiempo
       stepNodes.forEach((node, idx) => {
         const itemColor = CHRONOLOGY[idx].color;
         node.classList.toggle("active", idx === currentIndex);
@@ -1276,10 +1136,9 @@
 
     startArBtn.addEventListener("click", startARExperience);
     start2dBtn.addEventListener("click", () => open2DMode());
-    rescanBtn.addEventListener("click", triggerMapScanSequence);
 
     switchModeBtn.addEventListener("click", () => {
-      if (arActive) {
+      if (arRunning) {
         open2DMode();
       } else {
         startARExperience();
@@ -1289,7 +1148,7 @@
     // Inicialización base
     buildCleanFloatingMap();
     updateLocation(0, null);
-    requestAnimationFrame(render);
+    requestAnimationFrame(renderCanvasOverlay);
   </script>
 </body>
 </html>
