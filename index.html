@@ -1,298 +1,667 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mapa Surrealista WebAR - Leonora Carrington</title>
-    <!-- A-Frame y MindAR v1.2.5 -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:ital,wght@0,300;0,400;1,300&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mapa Surrealista 1929 - Cronología Leonora Carrington</title>
 
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Montserrat', sans-serif;
-            background-color: #0d0d0d;
-            color: #f0e6d2;
-        }
+  <!-- Three.js y MindAR para reconocimiento de imagen en WebAR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-three.prod.js"></script>
 
-        #ui-container {
-            position: absolute;
-            bottom: 35px;
-            left: 0;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            z-index: 1000;
-            pointer-events: none;
-        }
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
-        .carrington-btn {
-            pointer-events: auto;
-            background: rgba(18, 18, 18, 0.85);
-            color: #d4af37;
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            padding: 14px 28px;
-            border-radius: 4px;
-            font-family: 'Cinzel', serif;
-            font-size: 14px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            cursor: pointer;
-            backdrop-filter: blur(8px);
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 25px rgba(0,0,0,0.7);
-        }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #141413;
+      font-family: 'Georgia', serif;
+      color: #f5f2eb;
+    }
 
-        .carrington-btn:hover, .carrington-btn:active {
-            background: rgba(212, 175, 55, 0.15);
-            border-color: #d4af37;
-            color: #ffffff;
-            transform: translateY(-2px);
-        }
+    /* Contenedor de Vista Mapa Interactivo (2D / Fallback directo sobre el JPG) */
+    #map-stage {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #262522 0%, #111110 100%);
+      z-index: 2;
+      padding: 12px 12px 155px 12px;
+      transition: opacity 0.35s ease;
+    }
 
-        #instructions {
-            position: absolute;
-            top: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(13, 13, 13, 0.8);
-            color: #e0d5be;
-            padding: 12px 24px;
-            border-radius: 2px;
-            font-family: 'Cinzel', serif;
-            font-size: 13px;
-            letter-spacing: 1.5px;
-            z-index: 1000;
-            backdrop-filter: blur(6px);
-            text-align: center;
-            border-bottom: 1px solid #d4af37;
-            pointer-events: none;
-        }
+    #map-wrapper {
+      position: relative;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 4 / 3;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
 
-        #status-display {
-            position: absolute;
-            top: 85px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-family: 'Montserrat', sans-serif;
-            font-size: 11px;
-            letter-spacing: 1px;
-            color: #c5a059;
-            text-transform: uppercase;
-            z-index: 1000;
-            pointer-events: none;
-            background: rgba(0,0,0,0.5);
-            padding: 4px 12px;
-            border-radius: 10px;
-        }
-    </style>
+    #base-map-img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+
+    #overlay-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* Contenedor de Cámara WebAR */
+    #ar-container {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      display: none;
+    }
+
+    /* Barra superior */
+    .top-bar {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .status-pill, .mode-btn {
+      pointer-events: auto;
+      background: rgba(20, 20, 18, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(230, 215, 185, 0.3);
+      color: #f5f2eb;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .mode-btn {
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: bold;
+      color: #ffd166;
+      transition: transform 0.15s ease, background 0.2s ease;
+    }
+
+    .mode-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* Panel de control inferior para los 13 sucesos */
+    .hud-panel {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(94vw, 680px);
+      background: rgba(22, 21, 19, 0.92);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(230, 215, 185, 0.28);
+      border-radius: 14px;
+      padding: 14px 18px;
+      z-index: 20;
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65);
+    }
+
+    .event-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    .event-location {
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #ebd9b4;
+    }
+
+    .event-counter {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: #aaa396;
+    }
+
+    .event-description {
+      font-size: 0.92rem;
+      line-height: 1.38;
+      color: #f3efe6;
+      min-height: 2.7em;
+      margin-bottom: 12px;
+    }
+
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(235, 217, 180, 0.35);
+      background: rgba(255, 255, 255, 0.08);
+      color: #f5f2eb;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease, opacity 0.2s ease, transform 0.1s ease;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: rgba(235, 217, 180, 0.2);
+    }
+
+    .nav-btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .replay-btn {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(235, 217, 180, 0.25);
+      background: rgba(255, 209, 102, 0.12);
+      color: #ffd166;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 
-    <div id="instructions">«La realidad no está ahí para ser creída, sino para ser creada»</div>
-    <div id="status-display">Apunta la cámara al Mapa Surrealista</div>
+  <!-- Barra de estado y selector de modo AR / Mapa -->
+  <div class="top-bar">
+    <div class="status-pill" id="status-text">Cronología interactiva: Leonora Carrington</div>
+    <button class="mode-btn" id="toggle-ar-btn">📷 Escaneo AR (Cámara)</button>
+  </div>
 
-    <div id="ui-container">
-        <button class="carrington-btn" id="play-btn">Iniciar Recorrido y Audio</button>
-        <button class="carrington-btn" id="reset-btn" style="display:none;">Reiniciar</button>
+  <!-- Escenario del Mapa (muestra target/mapa_surrealista.jpg + animación de trayectos) -->
+  <div id="map-stage">
+    <div id="map-wrapper">
+      <img id="base-map-img" src="./target/mapa_surrealista.jpg" alt="Mapa Surrealista 1929" crossorigin="anonymous" />
+      <canvas id="overlay-canvas" width="1600" height="1200"></canvas>
     </div>
+  </div>
 
-    <!-- Escena MindAR -->
-    <a-scene 
-        mindar-image="imageTargetSrc: ./targets/mapa_surrealista.mind; uiScanning: yes;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
-        
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <!-- Contenedor para Cámara WebAR -->
+  <div id="ar-container"></div>
 
-        <!-- Target Entity asociado al mapa -->
-        <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
-            
-            <!-- Contenedor del Mapa (Solo puntos interactivos limpios, sin líneas de viaje) -->
-            <a-entity id="chronology-canvas" position="0 0 0.01">
-                
-                <!-- Punto 1: Inglaterra - Estrella Alquímica Dorada -->
-                <a-entity id="step-1" position="-0.35 0.25 0" visible="false">
-                    <a-ring color="#d4af37" radius-inner="0.015" radius-outer="0.025" material="shader: flat; transparent: true; opacity: 0.9" animation="property: scale; to: 1.6 1.6 1.6; dir: alternate; loop: true; dur: 900"></a-ring>
-                    <a-text value="1. NACIMIENTO (Inglaterra)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#f0e6d2"></a-text>
-                </a-entity>
+  <!-- Controles de Adelante / Atrás para los 13 sucesos -->
+  <div class="hud-panel">
+    <div class="event-header">
+      <span class="step-badge" id="step-badge">1</span>
+      <span class="event-location" id="event-location">Lancashire, Inglaterra</span>
+      <span class="event-counter" id="event-counter">Suceso 1 de 13</span>
+    </div>
+    <p class="event-description" id="event-description">
+      Nace el 6 de abril de 1917 en Lancashire, Inglaterra.
+    </p>
+    <div class="controls-row">
+      <button class="nav-btn" id="prev-btn" disabled>⬅ Atrás</button>
+      <button class="replay-btn" id="replay-btn" title="Repetir animación del trayecto">↻ Trayecto</button>
+      <button class="nav-btn" id="next-btn">Adelante ➡</button>
+    </div>
+  </div>
 
-                <!-- Punto 2: Florencia -->
-                <a-entity id="step-2" position="-0.28 0.20 0" visible="false">
-                    <a-circle color="#c5a059" radius="0.008" animation="property: opacity; from: 1; to: 0.2; dir: alternate; loop: true; dur: 400"></a-circle>
-                </a-entity>
+  <script>
+    /**
+     * 13 Sucesos históricos y coordenadas normalizadas (0.0 a 1.0)
+     * calibradas exactamente sobre ./target/mapa_surrealista.jpg
+     */
+    const CHRONOLOGY = [
+      {
+        id: 1,
+        place: "Lancashire, Inglaterra (1917)",
+        text: "Nace el 6 de abril de 1917 en Lancashire, Inglaterra.",
+        x: 0.089, y: 0.412,
+        color: "#c84b31"
+      },
+      {
+        id: 2,
+        place: "Florencia, Italia",
+        text: "Es enviada a estudiar a Florencia; conoce la Galería Uffizi.",
+        x: 0.148, y: 0.452,
+        color: "#2e5a27",
+        ctrl: { x: 0.128, y: 0.395 }
+      },
+      {
+        id: 3,
+        place: "Londres, Inglaterra",
+        text: "Estudia dibujo en la Academia de Amédée Ozenfant en Londres.",
+        x: 0.093, y: 0.428,
+        color: "#2b7bba",
+        ctrl: { x: 0.115, y: 0.468 }
+      },
+      {
+        id: 4,
+        place: "París, Francia",
+        text: "Viaja a París, donde se integra al movimiento surrealista.",
+        x: 0.114, y: 0.419,
+        color: "#3a7d6c",
+        ctrl: { x: 0.104, y: 0.405 }
+      },
+      {
+        id: 5,
+        place: "Saint-Martin d'Ardèche, Francia",
+        text: "Se instala en Saint-Martin d'Ardèche al sur de Francia, a lado de Max Ernst.",
+        x: 0.113, y: 0.453,
+        color: "#d1495b",
+        ctrl: { x: 0.123, y: 0.436 }
+      },
+      {
+        id: 6,
+        place: "Santander, España",
+        text: "Huye a España; es internada en un hospital psiquiátrico en Santander.",
+        x: 0.138, y: 0.461,
+        color: "#5c8d89",
+        ctrl: { x: 0.126, y: 0.472 }
+      },
+      {
+        id: 7,
+        place: "Lisboa, Portugal",
+        text: "En Lisboa, logra escapar de su enfermera. Se casa con Renato Leduc.",
+        x: 0.106, y: 0.468,
+        color: "#e07a2b",
+        ctrl: { x: 0.122, y: 0.485 }
+      },
+      {
+        id: 8,
+        place: "Nueva York, EE. UU.",
+        text: "Huye a Nueva York al lado de Leduc. Se reintegra al grupo surrealista.",
+        x: 0.864, y: 0.408,
+        color: "#e0b000",
+        // Curva superior siguiendo el arco del mapa surrealista por Rusia y Alaska
+        ctrl: { x: 0.485, y: 0.145 }
+      },
+      {
+        id: 9,
+        place: "Ciudad de México, México",
+        text: "Llega a México, se casa con Emerico 'Chiki' Weisz. Es amiga íntima de Remedios Varo.",
+        x: 0.808, y: 0.483,
+        color: "#6a4c93",
+        ctrl: { x: 0.855, y: 0.465 }
+      },
+      {
+        id: 10,
+        place: "Xilitla, San Luis Potosí",
+        text: "Visita a Edward James en Xilitla, San Luis Potosí.",
+        x: 0.823, y: 0.468,
+        color: "#8d2b2b",
+        ctrl: { x: 0.805, y: 0.468 }
+      },
+      {
+        id: 11,
+        place: "Nueva York, EE. UU.",
+        text: "Se establece en Nueva York en varias ocasiones.",
+        x: 0.873, y: 0.424,
+        color: "#1982c4",
+        ctrl: { x: 0.862, y: 0.455 }
+      },
+      {
+        id: 12,
+        place: "Chicago, EE. UU.",
+        text: "Vive en Chicago por unos años.",
+        x: 0.850, y: 0.431,
+        color: "#2b580c",
+        ctrl: { x: 0.862, y: 0.415 }
+      },
+      {
+        id: 13,
+        place: "Ciudad de México (2011)",
+        text: "Fallece en la Ciudad de México, el 25 de mayo de 2011.",
+        x: 0.809, y: 0.513,
+        color: "#c93b4b",
+        ctrl: { x: 0.812, y: 0.465 }
+      }
+    ];
 
-                <!-- Punto 3: Londres -->
-                <a-entity id="step-3" position="-0.22 0.16 0" visible="false">
-                    <a-ring color="#da70d6" radius-inner="0.01" radius-outer="0.02" material="shader: flat"></a-ring>
-                    <a-text value="3. LONDRES" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#da70d6"></a-text>
-                </a-entity>
+    const canvas = document.getElementById("overlay-canvas");
+    const ctx = canvas.getContext("2d");
 
-                <!-- Punto 4: Destello París -->
-                <a-entity id="step-4" position="-0.16 0.12 0" visible="false">
-                    <a-ring color="#00ffff" radius-inner="0.02" radius-outer="0.022" animation="property: rotation; to: 0 360 0; loop: true; dur: 1500"></a-ring>
-                </a-entity>
+    let currentIndex = 0;
+    let previousIndex = null;
+    let animStartTime = performance.now();
+    const TRAVEL_DURATION = 1350; // ms que dura el trayecto punteado
 
-                <!-- Punto 5: París Surrealista -->
-                <a-entity id="step-5" position="-0.12 0.08 0" visible="false">
-                    <a-circle color="#ff69b4" radius="0.012" material="shader: flat"></a-circle>
-                    <a-text value="5. PARIS" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ff69b4"></a-text>
-                </a-entity>
+    // Referencias UI
+    const stepBadge = document.getElementById("step-badge");
+    const eventLocation = document.getElementById("event-location");
+    const eventCounter = document.getElementById("event-counter");
+    const eventDescription = document.getElementById("event-description");
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+    const replayBtn = document.getElementById("replay-btn");
+    const toggleArBtn = document.getElementById("toggle-ar-btn");
+    const statusText = document.getElementById("status-text");
 
-                <!-- Punto 6: España -->
-                <a-entity id="step-6" position="-0.05 0.02 0" visible="false">
-                    <a-box color="#cc2929" width="0.025" height="0.006" depth="0.001"></a-box>
-                    <a-box color="#cc2929" width="0.006" height="0.025" depth="0.001"></a-box>
-                    <a-text value="6. ESPAÑA" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#cc2929"></a-text>
-                </a-entity>
+    let arTexture = null;
 
-                <!-- Punto 7: Lisboa -->
-                <a-entity id="step-7" position="0.02 -0.02 0" visible="false">
-                    <a-ring color="#ffffff" radius-inner="0.005" radius-outer="0.018" animation="property: scale; to: 1.4 1.4 1.4; dir: alternate; loop: true; dur: 700"></a-ring>
-                    <a-text value="7. LISBOA" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ffffff"></a-text>
-                </a-entity>
+    // Evalúa un punto en una curva Bézier cuadrática en t ∈ [0, 1]
+    function getQuadraticPoint(p0, pc, p1, t) {
+      const invT = 1 - t;
+      return {
+        x: invT * invT * p0.x + 2 * invT * t * pc.x + t * t * p1.x,
+        y: invT * invT * p0.y + 2 * invT * t * pc.y + t * t * p1.y
+      };
+    }
 
-                <!-- Punto 8: Nueva York -->
-                <a-entity id="step-8" position="0.15 0.15 0" visible="false">
-                    <a-ring color="#00ffff" radius-inner="0.015" radius-outer="0.02" material="side: double"></a-ring>
-                    <a-text value="8. NUEVA YORK" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#00ffff"></a-text>
-                </a-entity>
+    // Dibuja únicamente el trayecto activo con línea punteada hasta el progreso `progress` (0 a 1)
+    function drawPartialDottedCurve(p0, pc, p1, progress, color, time) {
+      const steps = 90;
+      const maxStep = Math.floor(steps * progress);
+      if (maxStep < 1) return;
 
-                <!-- Punto 9: México -->
-                <a-entity id="step-9" position="0.22 -0.05 0" visible="false">
-                    <a-cylinder color="#2e8b57" height="0.035" radius="0.006"></a-cylinder>
-                    <a-text value="9. MÉXICO" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#2e8b57"></a-text>
-                </a-entity>
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(p0.x * canvas.width, p0.y * canvas.height);
 
-                <!-- Punto 10: Xilitla -->
-                <a-entity id="step-10" position="0.27 -0.12 0" visible="false">
-                    <a-torus color="#ff1493" arc="270" radius="0.012" radius-tubular="0.002" animation="property: rotation; to: 0 0 360; loop: true; dur: 3000"></a-torus>
-                    <a-text value="10. XILITLA" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ff1493"></a-text>
-                </a-entity>
+      for (let i = 1; i <= maxStep; i++) {
+        const t = i / steps;
+        const pt = getQuadraticPoint(p0, pc, p1, t);
+        ctx.lineTo(pt.x * canvas.width, pt.y * canvas.height);
+      }
 
-                <!-- Punto 11 & 12: NY & Chicago -->
-                <a-entity id="step-12" position="0.18 0.08 0" visible="false">
-                    <a-circle color="#ffa500" radius="0.01"></a-circle>
-                    <a-text value="11-12. NY & CHICAGO" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ffa500"></a-text>
-                </a-entity>
+      // Sombra suave para destacar sobre el mapa sin saturarlo
+      ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
+      ctx.shadowBlur = 6;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5.5;
+      ctx.lineCap = "round";
+      ctx.setLineDash([10, 12]);
+      ctx.lineDashOffset = -(time * 0.035); // Efecto de avance en los puntos
+      ctx.stroke();
+      ctx.restore();
 
-                <!-- Punto Final: CDMX -->
-                <a-entity id="step-final" position="0.20 -0.02 0" visible="false">
-                    <a-box color="#ffffff" width="0.03" height="0.007" depth="0.001"></a-box>
-                    <a-box color="#ffffff" width="0.007" height="0.03" depth="0.001"></a-box>
-                    <a-text value="CDMX (Legado Eterno)" position="0.03 0.01 0" scale="0.12 0.12 0.12" color="#ffffff"></a-text>
-                </a-entity>
+      // Punto viajero brillante en la punta del trayecto mientras avanza
+      if (progress < 1) {
+        const head = getQuadraticPoint(p0, pc, p1, progress);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(head.x * canvas.width, head.y * canvas.height, 8, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 14;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
 
-            </a-entity>
+    // Dibuja el efecto de pulso concéntrico al llegar al punto histórico
+    function drawArrivalPulse(point, time, isArrived) {
+      const cx = point.x * canvas.width;
+      const cy = point.y * canvas.height;
 
-            <!-- Atmósfera Inmersiva: Mariposas y Luciérnagas volando en la sala virtual -->
-            <a-entity id="sala-atmosfera">
-                <a-sphere position="-0.4 0.3 0.05" radius="0.003" color="#ffd700" material="shader: flat" animation="property: position; to: 0.4 0.4 0.15; dir: alternate; loop: true; dur: 3500"></a-sphere>
-                <a-sphere position="0.3 0.2 0.08" radius="0.0025" color="#ffff88" material="shader: flat" animation="property: position; to: -0.3 -0.2 0.02; dir: alternate; loop: true; dur: 4200"></a-sphere>
-                <a-sphere position="0.0 -0.3 0.06" radius="0.003" color="#ffd700" material="shader: flat" animation="property: position; to: 0.2 0.3 0.1; dir: alternate; loop: true; dur: 3000"></a-sphere>
+      ctx.save();
 
-                <a-entity position="-0.2 -0.2 0.1" animation="property: position; to: 0.3 0.2 0.05; dir: alternate; loop: true; dur: 5000">
-                    <a-plane width="0.02" height="0.015" color="#ff69b4" material="side: double; transparent: true; opacity: 0.8" rotation="0 45 25"></a-plane>
-                </a-entity>
-                <a-entity position="0.2 0.1 0.08" animation="property: position; to: -0.2 -0.1 0.02; dir: alternate; loop: true; dur: 6000">
-                    <a-plane width="0.025" height="0.018" color="#da70d6" material="side: double; transparent: true; opacity: 0.8" rotation="10 -30 -15"></a-plane>
-                </a-entity>
-            </a-entity>
+      if (isArrived) {
+        // Dos ondas expansivas de pulso
+        for (let ring = 0; ring < 2; ring++) {
+          const cycle = ((time * 0.0012 + ring * 0.5) % 1);
+          const radius = 14 + cycle * 44;
+          const alpha = (1 - cycle) * 0.85;
 
-        </a-entity>
-    </a-scene>
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.strokeStyle = point.color;
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = 4;
+          ctx.stroke();
+        }
+      }
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const playBtn = document.getElementById("play-btn");
-            const resetBtn = document.getElementById("reset-btn");
-            const statusDisplay = document.getElementById("status-display");
-            const targetEntity = document.getElementById("ar-target");
+      // Marcador central activo
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.fillStyle = point.color;
+      ctx.shadowColor = "rgba(0,0,0,0.75)";
+      ctx.shadowBlur = 8;
+      ctx.fill();
 
-            const steps = [
-                { el: document.getElementById("step-1"), label: "1. Nace en Lancashire, Inglaterra" },
-                { el: document.getElementById("step-2"), label: "2. Florencia y Galerías Uffizi" },
-                { el: document.getElementById("step-3"), label: "3. Londres: Academia Amédée Ozenfant" },
-                { el: document.getElementById("step-4"), label: "4. Viaje e integración a París" },
-                { el: document.getElementById("step-5"), label: "5. Saint-Martin d'Ardèche con Max Ernst" },
-                { el: document.getElementById("step-6"), label: "6. Hospital psiquiátrico en Santander" },
-                { el: document.getElementById("step-7"), label: "7. Lisboa: Escape y matrimonio con Renato Leduc" },
-                { el: document.getElementById("step-8"), label: "8. Nueva York: Círculo surrealista" },
-                { el: document.getElementById("step-9"), label: "9. México: Enlace con Remedios Varo" },
-                { el: document.getElementById("step-10"), label: "10. Xilitla junto a Edward James" },
-                { el: document.getElementById("step-12"), label: "11-12. Retornos a NY y Chicago" },
-                { el: document.getElementById("step-final"), label: "Legado Eterno - CDMX (2011)" }
-            ];
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
 
-            let currentStepIndex = 0;
-            let sequenceTimer = null;
-            let isTracking = false;
-            let synth = window.speechSynthesis;
+      // Número del suceso dentro del pulso
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 14px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(point.id), cx, cy + 1);
 
-            function speakText(text) {
-                if (synth) {
-                    synth.cancel();
-                    let utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = 'es-MX';
-                    utterance.rate = 0.95;
-                    utterance.pitch = 1.0;
-                    synth.speak(utterance);
-                }
-            }
+      ctx.restore();
+    }
 
-            targetEntity.addEventListener("targetFound", () => {
-                isTracking = true;
-                statusDisplay.textContent = "Mapa Detectado • Listo para Recorrido Alquímico";
-                statusDisplay.style.color = "#d4af37";
+    // Bucle principal de animación (limpia el lienzo para no dejar líneas fijas acumuladas)
+    function renderLoop(now) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const currentEvent = CHRONOLOGY[currentIndex];
+
+      if (previousIndex !== null && previousIndex !== currentIndex) {
+        const prevEvent = CHRONOLOGY[previousIndex];
+        const elapsed = now - animStartTime;
+        const rawProgress = Math.min(1, elapsed / TRAVEL_DURATION);
+        // Suavizado easeInOutCubic
+        const progress = rawProgress < 0.5
+          ? 4 * rawProgress * rawProgress * rawProgress
+          : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
+
+        // Punto de control de la curva entre el suceso anterior y el actual
+        const ctrlSource = currentIndex > previousIndex ? currentEvent.ctrl : prevEvent.ctrl;
+        const pc = ctrlSource || {
+          x: (prevEvent.x + currentEvent.x) / 2,
+          y: Math.min(prevEvent.y, currentEvent.y) - 0.05
+        };
+
+        // Marcador discreto en el punto de salida
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(prevEvent.x * canvas.width, prevEvent.y * canvas.height, 8, 0, Math.PI * 2);
+        ctx.fillStyle = prevEvent.color;
+        ctx.globalAlpha = 0.7;
+        ctx.fill();
+        ctx.restore();
+
+        // Línea punteada animada del trayecto actual
+        drawPartialDottedCurve(prevEvent, pc, currentEvent, progress, currentEvent.color, now);
+
+        // Al llegar al destino (progress >= 0.98), activa los pulsos en el lugar
+        if (progress >= 0.98) {
+          drawArrivalPulse(currentEvent, now, true);
+        }
+      } else {
+        // Suceso inicial (1) con pulso directo
+        drawArrivalPulse(currentEvent, now, true);
+      }
+
+      if (arTexture) {
+        arTexture.needsUpdate = true;
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Actualiza la interfaz y dispara la animación hacia el suceso seleccionado
+    function goToStep(newIndex, fromIndex = currentIndex) {
+      if (newIndex < 0 || newIndex >= CHRONOLOGY.length) return;
+
+      previousIndex = fromIndex;
+      currentIndex = newIndex;
+      animStartTime = performance.now();
+
+      const item = CHRONOLOGY[currentIndex];
+      stepBadge.textContent = item.id;
+      stepBadge.style.backgroundColor = item.color;
+      eventLocation.textContent = item.place;
+      eventCounter.textContent = `Suceso ${item.id} de ${CHRONOLOGY.length}`;
+      eventDescription.textContent = item.text;
+
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === CHRONOLOGY.length - 1;
+    }
+
+    prevBtn.addEventListener("click", () => {
+      if (currentIndex > 0) goToStep(currentIndex - 1, currentIndex);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (currentIndex < CHRONOLOGY.length - 1) goToStep(currentIndex + 1, currentIndex);
+    });
+
+    replayBtn.addEventListener("click", () => {
+      const origin = currentIndex > 0 ? currentIndex - 1 : null;
+      goToStep(currentIndex, origin);
+    });
+
+    // Soporte con teclas de flecha izquierda / derecha
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" && currentIndex < CHRONOLOGY.length - 1) {
+        goToStep(currentIndex + 1, currentIndex);
+      } else if (e.key === "ArrowLeft" && currentIndex > 0) {
+        goToStep(currentIndex - 1, currentIndex);
+      }
+    });
+
+    /**
+     * Modo Cámara WebAR: compila ./target/mapa_surrealista.jpg directamente en el navegador
+     * y superpone únicamente el canvas transparente con las líneas punteadas y pulsos
+     */
+    let arStarted = false;
+    let arActive = false;
+    let mindarThree = null;
+
+    toggleArBtn.addEventListener("click", async () => {
+      const mapStage = document.getElementById("map-stage");
+      const arContainer = document.getElementById("ar-container");
+
+      if (!arActive) {
+        try {
+          toggleArBtn.disabled = true;
+          statusText.textContent = "Preparando reconocimiento de target JPG...";
+
+          if (!arStarted) {
+            const img = document.getElementById("base-map-img");
+            await img.decode();
+
+            // Compila el archivo ./target/mapa_surrealista.jpg en memoria para WebAR
+            const compiler = new window.MINDAR.IMAGE.Compiler();
+            await compiler.compileImageTargets([img], (progress) => {
+              statusText.textContent = `Procesando mapa target: ${Math.round(progress)}%`;
+            });
+            const exportedBuffer = await compiler.exportData();
+            const blob = new Blob([exportedBuffer]);
+            const targetUrl = URL.createObjectURL(blob);
+
+            mindarThree = new window.MINDAR.IMAGE.MindARThree({
+              container: arContainer,
+              imageTargetSrc: targetUrl
             });
 
-            targetEntity.addEventListener("targetLost", () => {
-                isTracking = false;
-                statusDisplay.textContent = "Buscando Mapa Surrealista...";
-                statusDisplay.style.color = "#888888";
-                if (synth) synth.cancel();
-            });
+            const { renderer, scene, camera } = mindarThree;
+            const anchor = mindarThree.addAnchor(0);
 
-playBtn.addEventListener("click", () => {
-                playBtn.style.display = "none";
-                resetBtn.style.display = "block";
-                currentStepIndex = 0;
-                runChronology();
+            // Textura transparente con únicamente los trayectos punteados y pulsos
+            arTexture = new THREE.CanvasTexture(canvas);
+            const aspect = canvas.height / canvas.width;
+            const planeGeo = new THREE.PlaneGeometry(1, aspect);
+            const planeMat = new THREE.MeshBasicMaterial({
+              map: arTexture,
+              transparent: true,
+              depthWrite: false
             });
+            const overlayMesh = new THREE.Mesh(planeGeo, planeMat);
+            anchor.group.add(overlayMesh);
 
-            resetBtn.addEventListener("click", () => {
-                if (sequenceTimer) clearTimeout(sequenceTimer);
-                if (synth) synth.cancel();
-                steps.forEach(s => s.el.setAttribute("visible", "false"));
-                currentStepIndex = 0;
-                playBtn.style.display = "block";
-                resetBtn.style.display = "none";
-                statusDisplay.textContent = isTracking ? "Mapa Detectado • Listo para Recorrido Alquímico" : "Buscando Mapa Surrealista...";
+            anchor.onTargetFound = () => {
+              statusText.textContent = "Mapa detectado — Usa Adelante / Atrás";
+            };
+            anchor.onTargetLost = () => {
+              statusText.textContent = "Apunta la cámara al Mapa Surrealista";
+            };
+
+            await mindarThree.start();
+            renderer.setAnimationLoop(() => {
+              renderer.render(scene, camera);
             });
+            arStarted = true;
+          } else {
+            await mindarThree.start();
+          }
 
-            function runChronology() {
-                if (currentStepIndex < steps.length) {
-                    steps[currentStepIndex].el.setAttribute("visible", "true");
-                    let currentLabel = steps[currentStepIndex].label;
-                    statusDisplay.textContent = currentLabel;
-                    speakText(currentLabel);
-                    currentStepIndex++;
-                    sequenceTimer = setTimeout(runChronology, 2200);
-                } else {
-                    statusDisplay.textContent = "Recorrido Alquímico Concluido";
-                    speakText("El viaje alquímico ha concluido. La realidad ha sido creada.");
-                    playBtn.style.display = "block";
-                    playBtn.textContent = "Repetir Ciclo";
-                }
-            }
-        });
-    </script>
+          arActive = true;
+          mapStage.style.opacity = "0";
+          mapStage.style.pointerEvents = "none";
+          arContainer.style.display = "block";
+          toggleArBtn.textContent = "🗺️ Ver Mapa en Pantalla";
+          statusText.textContent = "Apunta la cámara al Mapa Surrealista";
+        } catch (err) {
+          console.error(err);
+          statusText.textContent = "Cámara no disponible — Modo Mapa Interactivo activo";
+        } finally {
+          toggleArBtn.disabled = false;
+        }
+      } else {
+        if (mindarThree) mindarThree.stop();
+        arActive = false;
+        arContainer.style.display = "none";
+        mapStage.style.opacity = "1";
+        mapStage.style.pointerEvents = "auto";
+        toggleArBtn.textContent = "📷 Escaneo AR (Cámara)";
+        statusText.textContent = "Cronología interactiva: Leonora Carrington";
+      }
+    });
+
+    // Inicia en el Suceso 1 y arranca el bucle de animación
+    goToStep(0, null);
+    requestAnimationFrame(renderLoop);
+  </script>
 </body>
 </html>
