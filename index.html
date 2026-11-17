@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mapa Surrealista 1929 - WebAR Interactivo</title>
+  <title>Mapa Surrealista 1929 - WebAR Optimizado</title>
 
   <!-- Dependencias Core: Three.js y MindAR -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -45,7 +45,7 @@
       max-width: 1200px;
       aspect-ratio: 4 / 3;
       border-radius: 8px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
       overflow: hidden;
     }
 
@@ -56,7 +56,7 @@
       display: block;
     }
 
-    /* Canvas para vectores y partículas superpuestas */
+    /* Canvas para vectores cúbicos y partículas superpuestas */
     #overlay-canvas {
       position: absolute;
       inset: 0;
@@ -73,7 +73,7 @@
       display: none;
     }
 
-    /* Interfaz de Usuario Minimalista */
+    /* Barra Superior */
     .top-bar {
       position: fixed;
       top: 15px;
@@ -82,35 +82,48 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 10px;
       z-index: 20;
       pointer-events: none;
     }
 
-    .status-badge, .ar-toggle-btn {
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .status-badge, .action-btn {
       pointer-events: auto;
       background: rgba(15, 15, 15, 0.85);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: #fff;
-      padding: 10px 18px;
+      padding: 10px 16px;
       border-radius: 30px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
 
-    .ar-toggle-btn {
+    .action-btn {
       cursor: pointer;
       color: #00d2ff;
-      border-color: rgba(0, 210, 255, 0.3);
+      border-color: rgba(0, 210, 255, 0.35);
       transition: all 0.2s ease;
     }
 
-    .ar-toggle-btn:active {
+    .action-btn.download-mind {
+      display: none;
+      color: #ffd166;
+      border-color: rgba(255, 209, 102, 0.4);
+    }
+
+    .action-btn:active {
       transform: scale(0.95);
     }
 
-    /* Controles de Navegación */
+    /* Controles de Navegación (Sin texto de sucesos) */
     .hud-controls {
       position: fixed;
       bottom: 25px;
@@ -125,7 +138,7 @@
       align-items: center;
       gap: 15px;
       z-index: 20;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
     .nav-btn {
@@ -141,7 +154,7 @@
     }
 
     .nav-btn:disabled {
-      opacity: 0.4;
+      opacity: 0.35;
       cursor: not-allowed;
     }
 
@@ -166,9 +179,9 @@
 
     .location-name {
       color: #fff;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      min-width: 120px;
+      min-width: 135px;
       text-align: center;
     }
   </style>
@@ -176,11 +189,14 @@
 <body>
 
   <div class="top-bar">
-    <div class="status-badge" id="status-text">Sistema AR Iniciado</div>
-    <button class="ar-toggle-btn" id="toggle-ar-btn">Activar Cámara AR</button>
+    <div class="status-badge" id="status-text">Motor Listo (60/24 FPS Adaptativo)</div>
+    <div class="top-actions">
+      <button class="action-btn download-mind" id="download-mind-btn" title="Descarga el archivo precompilado y súbelo a /target/mapa_surrealista.mind">⬇ Guardar .mind</button>
+      <button class="action-btn" id="toggle-ar-btn">Activar Cámara AR</button>
+    </div>
   </div>
 
-  <!-- Vista 2D de respaldo y previsualización -->
+  <!-- Vista 2D de respaldo -->
   <div id="map-stage">
     <div id="map-wrapper">
       <img id="base-map-img" src="./target/mapa_surrealista.jpg" alt="Mapa Base" crossorigin="anonymous" />
@@ -190,40 +206,78 @@
 
   <div id="ar-container"></div>
 
-  <!-- Interfaz de Control (Sin textos descriptivos) -->
+  <!-- Controles inferiores -->
   <div class="hud-controls">
     <button class="nav-btn" id="prev-btn" disabled>Atrás</button>
-    <div class="location-display" id="replay-btn" title="Repetir animación">
+    <div class="location-display" id="replay-btn" title="Repetir trayecto">
       <div class="color-dot" id="color-dot"></div>
-      <div class="location-name" id="location-name">Lancashire</div>
+      <div class="location-name" id="location-name">1. Lancashire</div>
     </div>
     <button class="nav-btn" id="next-btn">Siguiente</button>
   </div>
 
   <script>
     /**
-     * Coordenadas de los 13 sucesos y colores cromáticos exactos extraídos del mapa de 1929.
+     * 13 Destinos con soporte de Curvas Bézier Cúbicas (cp1, cp2).
+     * El paso 8 (Lisboa -> Nueva York) define los dos puntos de control del arco polar
+     * sobre Rusia (cp1) y Alaska/Labrador (cp2).
      */
     const CHRONOLOGY = [
-      { id: 1,  city: "Lancashire",             x: 0.089, y: 0.412, color: "#d94a38" },
-      { id: 2,  city: "Florencia",              x: 0.148, y: 0.452, color: "#377d33", ctrl: { x: 0.128, y: 0.395 } },
-      { id: 3,  city: "Londres",                x: 0.093, y: 0.428, color: "#2e86c1" },
-      { id: 4,  city: "París",                  x: 0.114, y: 0.419, color: "#1e8449" },
-      { id: 5,  city: "Saint-Martin",           x: 0.113, y: 0.453, color: "#c0392b" },
-      { id: 6,  city: "Santander",              x: 0.138, y: 0.461, color: "#5499c7", ctrl: { x: 0.126, y: 0.472 } },
-      { id: 7,  city: "Lisboa",                 x: 0.106, y: 0.468, color: "#e67e22", ctrl: { x: 0.122, y: 0.485 } },
-      { id: 8,  city: "Nueva York",             x: 0.864, y: 0.408, color: "#f1c40f", ctrl: { x: 0.485, y: 0.145 } },
-      { id: 9,  city: "Ciudad de México",       x: 0.808, y: 0.483, color: "#8e44ad", ctrl: { x: 0.855, y: 0.465 } },
-      { id: 10, city: "Xilitla",                x: 0.823, y: 0.468, color: "#b03a2e" },
-      { id: 11, city: "Nueva York",             x: 0.873, y: 0.424, color: "#17a589" },
-      { id: 12, city: "Chicago",                x: 0.850, y: 0.431, color: "#239b56" },
-      { id: 13, city: "Ciudad de México",       x: 0.809, y: 0.513, color: "#cb4335", ctrl: { x: 0.812, y: 0.465 } }
+      { id: 1,  city: "Lancashire",       x: 0.089, y: 0.412, color: "#d94a38" },
+      {
+        id: 2,  city: "Florencia",        x: 0.148, y: 0.452, color: "#377d33",
+        cp1: { x: 0.112, y: 0.398 }, cp2: { x: 0.138, y: 0.415 }
+      },
+      {
+        id: 3,  city: "Londres",          x: 0.093, y: 0.428, color: "#2e86c1",
+        cp1: { x: 0.128, y: 0.468 }, cp2: { x: 0.105, y: 0.455 }
+      },
+      {
+        id: 4,  city: "París",            x: 0.114, y: 0.419, color: "#1e8449",
+        cp1: { x: 0.098, y: 0.412 }, cp2: { x: 0.108, y: 0.408 }
+      },
+      {
+        id: 5,  city: "Saint-Martin",     x: 0.113, y: 0.453, color: "#c0392b",
+        cp1: { x: 0.124, y: 0.430 }, cp2: { x: 0.124, y: 0.444 }
+      },
+      {
+        id: 6,  city: "Santander",        x: 0.138, y: 0.461, color: "#5499c7",
+        cp1: { x: 0.120, y: 0.470 }, cp2: { x: 0.130, y: 0.472 }
+      },
+      {
+        id: 7,  city: "Lisboa",           x: 0.106, y: 0.468, color: "#e67e22",
+        cp1: { x: 0.128, y: 0.484 }, cp2: { x: 0.114, y: 0.484 }
+      },
+      {
+        id: 8,  city: "Nueva York",       x: 0.864, y: 0.408, color: "#f1c40f",
+        // Curva Bézier Cúbica siguiendo el arco superior por Rusia y Alaska
+        cp1: { x: 0.275, y: 0.155 }, cp2: { x: 0.695, y: 0.145 }
+      },
+      {
+        id: 9,  city: "Ciudad de México", x: 0.808, y: 0.483, color: "#8e44ad",
+        cp1: { x: 0.862, y: 0.448 }, cp2: { x: 0.838, y: 0.478 }
+      },
+      {
+        id: 10, city: "Xilitla",          x: 0.823, y: 0.468, color: "#b03a2e",
+        cp1: { x: 0.805, y: 0.472 }, cp2: { x: 0.812, y: 0.464 }
+      },
+      {
+        id: 11, city: "Nueva York",       x: 0.873, y: 0.424, color: "#17a589",
+        cp1: { x: 0.848, y: 0.462 }, cp2: { x: 0.868, y: 0.445 }
+      },
+      {
+        id: 12, city: "Chicago",          x: 0.850, y: 0.431, color: "#239b56",
+        cp1: { x: 0.866, y: 0.414 }, cp2: { x: 0.856, y: 0.418 }
+      },
+      {
+        id: 13, city: "Ciudad de México", x: 0.809, y: 0.513, color: "#cb4335",
+        cp1: { x: 0.822, y: 0.455 }, cp2: { x: 0.805, y: 0.485 }
+      }
     ];
 
     const canvas = document.getElementById("overlay-canvas");
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: true });
 
-    // UI Elements
     const prevBtn = document.getElementById("prev-btn");
     const nextBtn = document.getElementById("next-btn");
     const replayBtn = document.getElementById("replay-btn");
@@ -231,24 +285,61 @@
     const colorDot = document.getElementById("color-dot");
     const statusText = document.getElementById("status-text");
     const toggleArBtn = document.getElementById("toggle-ar-btn");
+    const downloadMindBtn = document.getElementById("download-mind-btn");
 
     let currentIndex = 0;
     let previousIndex = null;
     let animStart = performance.now();
+    let isTraveling = false;
     let particles = [];
     let arTexture = null;
-    const DURATION = 1200; // ms
 
-    // Utilidad: Curvas Bézier
-    function getBezierPoint(p0, p1, p2, t) {
+    // Control de Throttling para móviles (60 FPS activo / 24 FPS reposo)
+    let lastRenderTime = 0;
+    const IDLE_FRAME_INTERVAL = 1000 / 24; // ~41.6 ms en reposo
+    const DURATION = 1350;
+
+    /**
+     * OPTIMIZACIÓN 1: Evaluador de Curva Bézier Cúbica
+     * B(t) = (1-t)^3*P0 + 3*(1-t)^2*t*P1 + 3*(1-t)*t^2*P2 + t^3*P3
+     */
+    function getCubicBezierPoint(p0, p1, p2, p3, t) {
       const u = 1 - t;
+      const tt = t * t;
+      const uu = u * u;
+      const uuu = uu * u;
+      const ttt = tt * t;
+
       return {
-        x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-        y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y
+        x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
+        y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
       };
     }
 
-    // Hex a RGBA para brillos
+    // Obtiene los dos puntos de control cúbicos en sentido de avance o retroceso
+    function getRouteControlPoints(fromNode, toNode, fromIdx, toIdx) {
+      const movingForward = toIdx > fromIdx;
+      const routeOwner = movingForward ? toNode : fromNode;
+
+      if (routeOwner.cp1 && routeOwner.cp2) {
+        return movingForward
+          ? { cp1: routeOwner.cp1, cp2: routeOwner.cp2 }
+          : { cp1: routeOwner.cp2, cp2: routeOwner.cp1 };
+      }
+
+      // Fallback automático si algún nodo no define cp1/cp2
+      return {
+        cp1: {
+          x: fromNode.x + (toNode.x - fromNode.x) * 0.33,
+          y: Math.min(fromNode.y, toNode.y) - 0.04
+        },
+        cp2: {
+          x: fromNode.x + (toNode.x - fromNode.x) * 0.66,
+          y: Math.min(fromNode.y, toNode.y) - 0.04
+        }
+      };
+    }
+
     function hexToRgba(hex, a) {
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
@@ -256,121 +347,175 @@
       return `rgba(${r},${g},${b},${a})`;
     }
 
-    // Generador del destello de partículas
     function emitParticles(x, y, color) {
-      particles = []; // Limpiar anteriores
-      for (let i = 0; i < 20; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 1 + Math.random() * 2;
+      particles = [];
+      for (let i = 0; i < 24; i++) {
+        const angle = (Math.PI * 2 * i) / 24 + (Math.random() - 0.5) * 0.2;
+        const speed = 1.4 + Math.random() * 2.8;
         particles.push({
           x, y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          radius: 2 + Math.random() * 2,
+          radius: 2.2 + Math.random() * 2.8,
           color,
           alpha: 1
         });
       }
     }
 
-    // Lógica principal de renderizado
+    /**
+     * OPTIMIZACIÓN 2: Render Loop con Throttling Dinámico
+     * - Durante animaciones de línea o partículas: 60 FPS fluidos.
+     * - Durante el pulso estático en la ciudad: 24 FPS para ahorrar CPU/GPU móvil.
+     */
     function render(time) {
+      requestAnimationFrame(render);
+
+      if (document.hidden) return;
+
+      const highFreqNeeded = isTraveling || particles.length > 0;
+      if (!highFreqNeeded && (time - lastRenderTime < IDLE_FRAME_INTERVAL)) {
+        return;
+      }
+      lastRenderTime = time;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const current = CHRONOLOGY[currentIndex];
 
+      // 1. Dibujar trayecto cúbico punteado si hay desplazamiento
       if (previousIndex !== null && previousIndex !== currentIndex) {
         const prev = CHRONOLOGY[previousIndex];
         const elapsed = time - animStart;
         const progress = Math.min(elapsed / DURATION, 1);
-        
-        // Función de aceleración easeOutQuart
         const easeProgress = 1 - Math.pow(1 - progress, 4);
 
-        const ctrl = current.ctrl || prev.ctrl || {
-          x: (prev.x + current.x) / 2,
-          y: Math.min(prev.y, current.y) - 0.1
-        };
+        const { cp1, cp2 } = getRouteControlPoints(prev, current, previousIndex, currentIndex);
 
-        // Dibujar línea de trayecto dinámico
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(prev.x * canvas.width, prev.y * canvas.height);
-        
-        const steps = 60;
+
+        const steps = 85;
         const currentSteps = Math.floor(steps * easeProgress);
-        
+
         for (let i = 1; i <= currentSteps; i++) {
-          const pt = getBezierPoint(prev, ctrl, current, i / steps);
+          const pt = getCubicBezierPoint(prev, cp1, cp2, current, i / steps);
           ctx.lineTo(pt.x * canvas.width, pt.y * canvas.height);
         }
 
         ctx.strokeStyle = current.color;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 4.5;
         ctx.lineCap = "round";
-        ctx.setLineDash([8, 12]);
-        ctx.lineDashOffset = -(time * 0.05);
+        ctx.setLineDash([9, 13]);
+        ctx.lineDashOffset = -(time * 0.045);
         ctx.shadowColor = current.color;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 12;
         ctx.stroke();
         ctx.restore();
 
-        // Disparar destello al llegar
-        if (progress >= 1 && particles.length === 0) {
+        // Cabeza luminosa en movimiento
+        if (progress < 1) {
+          const head = getCubicBezierPoint(prev, cp1, cp2, current, easeProgress);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(head.x * canvas.width, head.y * canvas.height, 7, 0, Math.PI * 2);
+          ctx.fillStyle = "#ffffff";
+          ctx.shadowColor = current.color;
+          ctx.shadowBlur = 16;
+          ctx.fill();
+          ctx.restore();
+        } else if (isTraveling) {
+          isTraveling = false;
           emitParticles(current.x * canvas.width, current.y * canvas.height, current.color);
         }
       }
 
-      // Dibujar partículas activas
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      particles.forEach((p, i) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.alpha -= 0.02;
-        if (p.alpha <= 0) {
-          particles.splice(i, 1);
-          return;
-        }
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(p.color, p.alpha);
-        ctx.fill();
-      });
-      ctx.restore();
+      // 2. Actualizar y dibujar partículas de llegada
+      if (particles.length > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.96;
+          p.vy *= 0.96;
+          p.alpha -= 0.024;
 
-      // Dibujar Pulso Cromático Constante en el destino
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(p.color, p.alpha);
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 12;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 3. Dibujar Pulso Cromático de la ciudad destino
       const cx = current.x * canvas.width;
       const cy = current.y * canvas.height;
-      const pulseSize = 10 + Math.sin(time * 0.005) * 5;
+      const beat = 0.5 + 0.5 * Math.sin(time * 0.005);
 
       ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+
+      // Halo radial del color del punto
+      const outerRadius = 28 + beat * 24;
+      const grad = ctx.createRadialGradient(cx, cy, 3, cx, cy, outerRadius);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.3, hexToRgba(current.color, 0.85));
+      grad.addColorStop(1, hexToRgba(current.color, 0));
+
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(cx, cy, pulseSize, 0, Math.PI * 2);
-      ctx.fillStyle = hexToRgba(current.color, 0.4);
-      ctx.shadowColor = current.color;
-      ctx.shadowBlur = 20;
+      ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Núcleo sólido
+      // Onda expansiva concéntrica
+      const waveCycle = (time * 0.001) % 1;
+      const waveRadius = 10 + waveCycle * 42;
       ctx.beginPath();
-      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-      ctx.fillStyle = current.color;
-      ctx.fill();
+      ctx.arc(cx, cy, waveRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(current.color, (1 - waveCycle) * 0.85);
+      ctx.lineWidth = 3;
+      ctx.stroke();
       ctx.restore();
 
-      if (arTexture) arTexture.needsUpdate = true;
-      requestAnimationFrame(render);
+      // Núcleo sólido
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fillStyle = current.color;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.5;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Solo actualiza la textura 3D cuando este fotograma fue efectivamente repintado
+      if (arTexture) {
+        arTexture.needsUpdate = true;
+      }
     }
 
-    // Navegación
-    function updateLocation(newIndex) {
-      previousIndex = currentIndex;
+    function updateLocation(newIndex, originIndex = currentIndex) {
+      previousIndex = originIndex;
       currentIndex = newIndex;
       animStart = performance.now();
-      particles = []; // Resetea partículas
-      
+      isTraveling = (originIndex !== null && originIndex !== newIndex);
+
       const loc = CHRONOLOGY[currentIndex];
-      locationName.textContent = loc.city;
+      if (!isTraveling) {
+        emitParticles(loc.x * canvas.width, loc.y * canvas.height, loc.color);
+      }
+
+      locationName.textContent = `${loc.id}. ${loc.city}`;
       colorDot.style.backgroundColor = loc.color;
       colorDot.style.color = loc.color;
 
@@ -379,21 +524,67 @@
     }
 
     prevBtn.addEventListener("click", () => {
-      if (currentIndex > 0) updateLocation(currentIndex - 1);
+      if (currentIndex > 0) updateLocation(currentIndex - 1, currentIndex);
     });
 
     nextBtn.addEventListener("click", () => {
-      if (currentIndex < CHRONOLOGY.length - 1) updateLocation(currentIndex + 1);
+      if (currentIndex < CHRONOLOGY.length - 1) updateLocation(currentIndex + 1, currentIndex);
     });
 
     replayBtn.addEventListener("click", () => {
-      updateLocation(currentIndex);
+      const origin = currentIndex > 0 ? currentIndex - 1 : null;
+      updateLocation(currentIndex, origin);
     });
 
-    // Motor WebAR - Tres.js & MindAR
+    /**
+     * OPTIMIZACIÓN 3: Carga prioritaria de ./target/mapa_surrealista.mind
+     * Si el archivo .mind ya está en el repositorio, el arranque AR es instantáneo.
+     * Si no existe aún, compila el JPG en vivo y habilita un botón para descargar el .mind.
+     */
+    const PRECOMPILED_MIND_PATH = "./target/mapa_surrealista.mind";
     let arActive = false;
-    let arCompiler = null;
-    
+    let arInstance = null;
+    let compiledMindBlobUrl = null;
+
+    async function resolveTargetSource() {
+      try {
+        const res = await fetch(PRECOMPILED_MIND_PATH, { method: "HEAD", cache: "no-cache" });
+        if (res.ok) {
+          statusText.textContent = "Target .mind precompilado detectado";
+          return PRECOMPILED_MIND_PATH;
+        }
+      } catch (_) {
+        // Continúa al compilador local si falla la petición HEAD
+      }
+
+      statusText.textContent = "Compilando JPG (Sube el .mind para carga instantánea)...";
+      const img = document.getElementById("base-map-img");
+      if (!img.complete) await new Promise(r => img.onload = r);
+
+      const compiler = new window.MINDAR.IMAGE.Compiler();
+      await compiler.compileImageTargets([img], (p) => {
+        statusText.textContent = `Compilando Target: ${Math.round(p)}%`;
+      });
+
+      const buffer = await compiler.exportData();
+      const blob = new Blob([buffer], { type: "application/octet-stream" });
+      compiledMindBlobUrl = URL.createObjectURL(blob);
+
+      // Muestra el botón para que puedas guardar mapa_surrealista.mind y subirlo a GitHub
+      downloadMindBtn.style.display = "inline-block";
+      return compiledMindBlobUrl;
+    }
+
+    downloadMindBtn.addEventListener("click", () => {
+      if (!compiledMindBlobUrl) return;
+      const a = document.createElement("a");
+      a.href = compiledMindBlobUrl;
+      a.download = "mapa_surrealista.mind";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
     toggleArBtn.addEventListener("click", async () => {
       const stage = document.getElementById("map-stage");
       const arCont = document.getElementById("ar-container");
@@ -401,68 +592,67 @@
       if (!arActive) {
         try {
           toggleArBtn.disabled = true;
-          statusText.textContent = "Compilando Target AR...";
 
-          if (!arCompiler) {
-            const img = document.getElementById("base-map-img");
-            if (!img.complete) await new Promise(r => img.onload = r);
-            
-            const compiler = new window.MINDAR.IMAGE.Compiler();
-            await compiler.compileImageTargets([img], (p) => {
-              statusText.textContent = `Procesando: ${Math.round(p)}%`;
-            });
-            const buffer = await compiler.exportData();
-            const blob = new Blob([buffer]);
-            const targetSrc = URL.createObjectURL(blob);
+          if (!arInstance) {
+            const targetSrc = await resolveTargetSource();
 
-            arCompiler = new window.MINDAR.IMAGE.MindARThree({
+            arInstance = new window.MINDAR.IMAGE.MindARThree({
               container: arCont,
-              imageTargetSrc: targetSrc
+              imageTargetSrc: targetSrc,
+              filterMinCF: 0.001,
+              filterBeta: 0.01
             });
 
-            const { renderer, scene, camera } = arCompiler;
-            const anchor = arCompiler.addAnchor(0);
+            const { renderer, scene, camera } = arInstance;
+            const anchor = arInstance.addAnchor(0);
 
-            // Vinculación del Canvas 2D al plano 3D
             arTexture = new THREE.CanvasTexture(canvas);
+            arTexture.minFilter = THREE.LinearFilter;
+            arTexture.magFilter = THREE.LinearFilter;
+            arTexture.generateMipmaps = false;
+
             const aspect = canvas.height / canvas.width;
             const mesh = new THREE.Mesh(
               new THREE.PlaneGeometry(1, aspect),
-              new THREE.MeshBasicMaterial({ map: arTexture, transparent: true })
+              new THREE.MeshBasicMaterial({
+                map: arTexture,
+                transparent: true,
+                depthWrite: false
+              })
             );
             anchor.group.add(mesh);
 
-            anchor.onTargetFound = () => statusText.textContent = "Target Detectado";
-            anchor.onTargetLost = () => statusText.textContent = "Buscando Target...";
+            anchor.onTargetFound = () => statusText.textContent = "Mapa Reconocido — AR Activo";
+            anchor.onTargetLost = () => statusText.textContent = "Apunta al Mapa Surrealista";
 
-            await arCompiler.start();
+            await arInstance.start();
             renderer.setAnimationLoop(() => renderer.render(scene, camera));
           } else {
-            await arCompiler.start();
+            await arInstance.start();
           }
 
           arActive = true;
           stage.style.display = "none";
           arCont.style.display = "block";
-          toggleArBtn.textContent = "Volver a Vista Web";
+          toggleArBtn.textContent = "Vista 2D";
         } catch (e) {
-          statusText.textContent = "Error al iniciar cámara.";
+          statusText.textContent = "Error al iniciar cámara AR";
           console.error(e);
         } finally {
           toggleArBtn.disabled = false;
         }
       } else {
-        if (arCompiler) arCompiler.stop();
+        if (arInstance) arInstance.stop();
         arActive = false;
         stage.style.display = "flex";
         arCont.style.display = "none";
         toggleArBtn.textContent = "Activar Cámara AR";
-        statusText.textContent = "Sistema 2D Activo";
+        statusText.textContent = "Vista 2D Activa";
       }
     });
 
-    // Inicializar
-    updateLocation(0);
+    // Inicializar en Lancashire (Suceso 1)
+    updateLocation(0, null);
     requestAnimationFrame(render);
   </script>
 </body>
