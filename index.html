@@ -2,119 +2,198 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mapa Surrealista 1929 — Experiencia WebAR Museo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Mapa Surrealista 1929 — WebAR Museo Leonora Carrington</title>
 
-  <!-- Motores 3D y Reconocimiento de Imagen WebAR -->
+  <!-- Motor 3D Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-three.prod.js"></script>
 
   <style>
+    :root {
+      --bg-glass: rgba(16, 15, 13, 0.82);
+      --bg-glass-strong: rgba(12, 11, 10, 0.92);
+      --border-gold: rgba(230, 194, 122, 0.32);
+      --accent-gold: #e6c27a;
+      --text-cream: #f6f2e9;
+      --text-muted: #b8b0a0;
+      --safe-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    body, html {
+    html, body {
       width: 100%;
       height: 100%;
       overflow: hidden;
       background-color: #0b0b0a;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      color: #f5f2eb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-cream);
     }
 
-    /* Pantalla de Bienvenida para el Visitante del Museo */
+    /* Cuando el AR está activo, el fondo del documento es transparente para no tapar el video */
+    body.ar-mode-active {
+      background-color: transparent;
+    }
+
+    /* =========================================================
+       1. MODAL DE BIENVENIDA MUSEOGRÁFICO
+       ========================================================= */
     #welcome-screen {
       position: fixed;
       inset: 0;
-      z-index: 50;
-      background: radial-gradient(circle at center, #23211d 0%, #0b0b0a 100%);
+      z-index: 100;
+      background:
+        radial-gradient(circle at 50% 25%, rgba(230, 194, 122, 0.14) 0%, transparent 60%),
+        radial-gradient(circle at center, #1e1c18 0%, #0a0908 100%);
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px;
-      text-align: center;
-      transition: opacity 0.4s ease;
+      padding: 20px;
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+
+    #welcome-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .welcome-card {
-      max-width: 420px;
-      background: rgba(25, 24, 21, 0.9);
-      border: 1px solid rgba(235, 217, 180, 0.25);
-      border-radius: 20px;
-      padding: 28px 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      width: min(92vw, 430px);
+      background: var(--bg-glass-strong);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-gold);
+      border-radius: 24px;
+      padding: 30px 24px 26px;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
-    .welcome-sub {
-      font-size: 0.8rem;
+    .museum-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      color: #d4c3a3;
-      margin-bottom: 8px;
+      letter-spacing: 2.5px;
+      color: var(--accent-gold);
+      background: rgba(230, 194, 122, 0.12);
+      border: 1px solid rgba(230, 194, 122, 0.3);
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 14px;
     }
 
     .welcome-title {
-      font-family: 'Georgia', serif;
-      font-size: 1.6rem;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 1.75rem;
       font-style: italic;
+      font-weight: 700;
       color: #ffffff;
-      margin-bottom: 12px;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .welcome-author {
+      font-family: 'Georgia', serif;
+      font-size: 1.05rem;
+      color: var(--accent-gold);
+      margin-bottom: 16px;
     }
 
     .welcome-desc {
-      font-size: 0.92rem;
-      line-height: 1.45;
-      color: #ccc5b9;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-muted);
       margin-bottom: 24px;
     }
 
-    .primary-ar-btn {
+    .btn-primary-ar {
       width: 100%;
-      padding: 15px 20px;
-      border-radius: 999px;
+      padding: 16px 20px;
+      border-radius: 16px;
       border: none;
-      background: linear-gradient(135deg, #ffd166 0%, #e09f3e 100%);
-      color: #141413;
+      background: linear-gradient(135deg, #f0cf85 0%, #d49b38 100%);
+      color: #12110f;
       font-size: 1rem;
       font-weight: 800;
+      letter-spacing: 0.3px;
       cursor: pointer;
-      box-shadow: 0 8px 25px rgba(255, 209, 102, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 10px 28px rgba(212, 155, 56, 0.35);
       margin-bottom: 12px;
-      transition: transform 0.15s ease;
+      transition: transform 0.15s ease, filter 0.2s ease;
     }
 
-    .primary-ar-btn:active {
+    .btn-primary-ar:active {
       transform: scale(0.97);
     }
 
-    .secondary-2d-btn {
+    .btn-secondary-2d {
       width: 100%;
-      padding: 11px 16px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: transparent;
-      color: #dcd6c8;
-      font-size: 0.85rem;
+      padding: 13px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-cream);
+      font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
+      transition: background 0.2s ease;
     }
 
-    /* Contenedor de Cámara WebAR */
-    #ar-container {
+    .btn-secondary-2d:active {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* =========================================================
+       2. ESCENARIO CÁMARA WEBAR + LIENZO 3D FLOTANTE
+       ========================================================= */
+    #ar-stage {
       position: fixed;
       inset: 0;
+      width: 100vw;
+      height: 100vh;
       z-index: 1;
       display: none;
+      overflow: hidden;
+      background: #000;
     }
 
-    /* Guía en pantalla cuando el visitante busca el mapa con la cámara */
-    #scan-guide {
+    /* Video nativo de la cámara trasera con visibilidad garantizada */
+    #ar-camera-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Capa 3D transparente sobre el video de la cámara */
+    #ar-webgl-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      touch-action: none;
+    }
+
+    /* =========================================================
+       3. RETÍCULA DE ESCANEO AR (MIRA LÁSER)
+       ========================================================= */
+    #scan-overlay {
       position: fixed;
       inset: 0;
       z-index: 15;
@@ -123,51 +202,91 @@
       align-items: center;
       justify-content: center;
       pointer-events: none;
+      padding-bottom: 80px;
+      transition: opacity 0.35s ease;
     }
 
-    .scan-frame {
-      width: min(78vw, 380px);
+    .reticle-box {
+      position: relative;
+      width: min(80vw, 360px);
       aspect-ratio: 4 / 3;
-      border: 2px dashed rgba(255, 209, 102, 0.75);
-      border-radius: 16px;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.38);
+      border-radius: 18px;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 16px;
-      text-align: center;
+      overflow: hidden;
     }
 
-    .scan-frame span {
-      background: rgba(12, 12, 11, 0.85);
-      padding: 8px 16px;
+    /* Esquinas del visor */
+    .corner {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: var(--accent-gold);
+      border-style: solid;
+      border-width: 0;
+    }
+    .corner.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 14px; }
+    .corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 14px; }
+    .corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 14px; }
+    .corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 14px; }
+
+    /* Línea láser de escaneo */
+    .laser-line {
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ffd166, #ffffff, #ffd166, transparent);
+      box-shadow: 0 0 14px #ffd166;
+      animation: scanMove 2.2s ease-in-out infinite;
+    }
+
+    @keyframes scanMove {
+      0%, 100% { top: 12%; opacity: 0.4; }
+      50% { top: 88%; opacity: 1; }
+    }
+
+    .scan-hint-pill {
+      margin-top: 18px;
+      background: var(--bg-glass-strong);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-gold);
+      color: var(--accent-gold);
+      padding: 10px 18px;
       border-radius: 999px;
-      font-size: 0.85rem;
-      color: #ffd166;
-      border: 1px solid rgba(255, 209, 102, 0.35);
+      font-size: 0.84rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     }
 
-    /* Vista Previa 2D (Para probar en laptop sin usar cámara) */
-    #map-stage {
+    /* =========================================================
+       4. ESCENARIO 2D INTERACTIVO (MODO PANTALLA COMPLETA)
+       ========================================================= */
+    #map-2d-stage {
       position: fixed;
       inset: 0;
+      z-index: 5;
       display: none;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at center, #1f1e1b 0%, #090908 100%);
-      z-index: 2;
-      padding: 65px 16px 95px 16px;
+      background: radial-gradient(circle at center, #201e1a 0%, #090908 100%);
+      padding: 68px 14px calc(135px + var(--safe-bottom)) 14px;
     }
 
-    #map-wrapper {
+    #map-2d-wrapper {
       position: relative;
       width: 100%;
-      max-width: 1100px;
+      max-width: 1080px;
       aspect-ratio: 4 / 3;
-      border-radius: 10px;
-      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.85);
+      max-height: 100%;
+      border-radius: 14px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 55px rgba(0, 0, 0, 0.85);
+      border: 1px solid var(--border-gold);
     }
 
     #clean-map-canvas, #overlay-canvas {
@@ -175,106 +294,230 @@
       inset: 0;
       width: 100%;
       height: 100%;
+      object-fit: contain;
     }
 
     #overlay-canvas {
       pointer-events: none;
     }
 
-    /* Barra Superior */
-    .top-bar {
+    /* =========================================================
+       5. BARRA SUPERIOR (HUD TOP)
+       ========================================================= */
+    .hud-top {
       position: fixed;
-      top: 14px;
+      top: max(12px, env(safe-area-inset-top, 12px));
       left: 14px;
       right: 14px;
+      z-index: 30;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      z-index: 25;
+      gap: 8px;
       pointer-events: none;
     }
 
-    .status-badge, .switch-mode-btn {
+    .status-chip {
       pointer-events: auto;
-      background: rgba(14, 14, 13, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      color: #f5f2eb;
-      padding: 9px 15px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 8px 14px;
       border-radius: 999px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
+      color: var(--text-cream);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
     }
 
-    .switch-mode-btn {
+    .live-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+      animation: blinkDot 1.8s infinite;
+    }
+
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .top-btn-group {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .hud-chip-btn {
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-gold);
+      color: var(--accent-gold);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
       cursor: pointer;
-      color: #ffd166;
-      border-color: rgba(255, 209, 102, 0.35);
+      transition: transform 0.15s ease, background 0.2s ease;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
     }
 
-    /* Controles de Avance y Retroceso (13 Destinos) */
-    .hud-controls {
+    .hud-chip-btn:active {
+      transform: scale(0.94);
+    }
+
+    /* =========================================================
+       6. DOCK INFERIOR UI/UX CON SCRUBBER DE 13 DESTINOS
+       ========================================================= */
+    .hud-bottom-dock {
       position: fixed;
-      bottom: 22px;
+      bottom: max(14px, var(--safe-bottom));
       left: 50%;
       transform: translateX(-50%);
-      width: min(94vw, 520px);
-      background: rgba(14, 14, 13, 0.92);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 999px;
-      padding: 8px 12px;
+      width: min(95vw, 540px);
+      background: var(--bg-glass-strong);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border-gold);
+      border-radius: 22px;
+      padding: 12px 14px;
+      z-index: 30;
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Barra de 13 nodos interactivos */
+    .timeline-scrubber {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+      position: relative;
+    }
+
+    .timeline-track-line {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.12);
+      z-index: 0;
+    }
+
+    .step-node {
+      position: relative;
+      z-index: 1;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      background: #1b1a17;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.62rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .step-node.visited {
+      border-color: rgba(255, 255, 255, 0.7);
+      color: #fff;
+    }
+
+    .step-node.active {
+      transform: scale(1.28);
+      border-color: #ffffff;
+      color: #ffffff;
+    }
+
+    /* Fila principal de controles */
+    .dock-main-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      z-index: 25;
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75);
     }
 
-    .nav-btn {
+    .nav-pill-btn {
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      color: #ffffff;
-      padding: 11px 18px;
-      border-radius: 999px;
-      font-size: 0.88rem;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: var(--text-cream);
+      padding: 11px 16px;
+      border-radius: 14px;
+      font-size: 0.86rem;
       font-weight: 700;
       cursor: pointer;
-      transition: background 0.2s ease, transform 0.1s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+      flex-shrink: 0;
     }
 
-    .nav-btn:active:not(:disabled) {
+    .nav-pill-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .nav-pill-btn:active:not(:disabled) {
       transform: scale(0.95);
     }
 
-    .nav-btn:disabled {
-      opacity: 0.3;
+    .nav-pill-btn:disabled {
+      opacity: 0.28;
       cursor: not-allowed;
     }
 
-    .location-display {
+    .destination-center {
+      flex: 1;
+      display: flex;
+       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    .dest-meta {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .dest-title-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 4px 10px;
-      cursor: pointer;
+      gap: 8px;
     }
 
-    .color-dot {
-      width: 15px;
-      height: 15px;
+    .dest-color-orb {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
-      flex-shrink: 0;
       box-shadow: 0 0 12px currentColor;
+      flex-shrink: 0;
     }
 
-    .location-name {
-      color: #ffffff;
-      font-size: 0.98rem;
+    .dest-city-name {
+      font-family: 'Georgia', serif;
+      font-size: 1.05rem;
       font-weight: 700;
+      color: #ffffff;
       text-align: center;
-      white-space: nowrap;
     }
 
     /* Imagen fuente oculta */
@@ -285,112 +528,144 @@
 </head>
 <body>
 
-  <!-- Imagen original en tu carpeta target/ -->
-  <img id="source-map-img" src="./target/mapa_surrealista.jpg" crossorigin="anonymous" alt="Mapa Fuente" />
+  <!-- Imagen base en la carpeta target/ del repositorio -->
+  <img id="source-map-img" src="./target/mapa_surrealista.jpg" crossorigin="anonymous" alt="Mapa Surrealista" />
 
-  <!-- Pantalla de Entrada para el Visitante -->
+  <!-- 1. PANTALLA DE BIENVENIDA -->
   <div id="welcome-screen">
     <div class="welcome-card">
-      <div class="welcome-sub">Museo Leonora Carrington</div>
+      <span class="museum-tag">Experiencia Interactiva WebAR</span>
       <h1 class="welcome-title">Mapa Surrealista (1929)</h1>
+      <div class="welcome-author">Leonora Carrington</div>
       <p class="welcome-desc">
-        Apunta tu cámara hacia el mapa de la sala para desplegar el lienzo flotante en Realidad Aumentada y recorrer los 13 destinos con los botones inferiores.
+        Apunta la cámara de tu teléfono hacia el mapa de la sala para desplegar el lienzo flotante en 3D y recorrer los 13 destinos con pulsos cromáticos.
       </p>
-      <button class="primary-ar-btn" id="start-ar-btn">📷 Iniciar Cámara AR</button>
-      <button class="secondary-2d-btn" id="start-2d-btn">🗺️ Ver Mapa Interactivo (Sin Cámara)</button>
+      <button class="btn-primary-ar" id="start-ar-btn">
+        <span>📷</span> Activar Cámara AR
+      </button>
+      <button class="btn-secondary-2d" id="start-2d-btn">
+        🗺️ Explorar en Modo Pantalla (2D)
+      </button>
     </div>
   </div>
 
-  <!-- Barra Superior -->
-  <div class="top-bar">
-    <div class="status-badge" id="status-text">Preparando lienzo...</div>
-    <button class="switch-mode-btn" id="switch-mode-btn">Cambiar a Vista 2D</button>
-  </div>
-
-  <!-- Guía de Escaneo en Cámara -->
-  <div id="scan-guide">
-    <div class="scan-frame">
-      <span>Apunta al Mapa Surrealista de la pared</span>
+  <!-- 2. BARRA SUPERIOR HUD -->
+  <div class="hud-top">
+    <div class="status-chip">
+      <span class="live-indicator" id="live-dot"></span>
+      <span id="status-text">Listo para iniciar</span>
+    </div>
+    <div class="top-btn-group">
+      <button class="hud-chip-btn" id="rescan-btn" style="display: none;">🎯 Re-enfocar</button>
+      <button class="hud-chip-btn" id="switch-mode-btn">Vista 2D</button>
     </div>
   </div>
 
-  <!-- Escenario 2D de Respaldo -->
-  <div id="map-stage">
-    <div id="map-wrapper">
+  <!-- 3. RETÍCULA DE ESCANEO LÁSER -->
+  <div id="scan-overlay">
+    <div class="reticle-box">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div class="laser-line"></div>
+    </div>
+    <div class="scan-hint-pill" id="scan-hint-text">
+      Apunta hacia el Mapa Surrealista...
+    </div>
+  </div>
+
+  <!-- 4. ESCENARIO CÁMARA AR + 3D FLOTANTE -->
+  <div id="ar-stage">
+    <video id="ar-camera-video" autoplay playsinline muted></video>
+    <div id="ar-webgl-container"></div>
+  </div>
+
+  <!-- 5. ESCENARIO 2D INTERACTIVO -->
+  <div id="map-2d-stage">
+    <div id="map-2d-wrapper">
       <canvas id="clean-map-canvas" width="1600" height="1200"></canvas>
       <canvas id="overlay-canvas" width="1600" height="1200"></canvas>
     </div>
   </div>
 
-  <!-- Contenedor de Cámara WebAR -->
-  <div id="ar-container"></div>
-
-  <!-- Botones de Control para los 13 Destinos -->
-  <div class="hud-controls">
-    <button class="nav-btn" id="prev-btn" disabled>⬅ Atrás</button>
-    <div class="location-display" id="replay-btn" title="Toca para repetir el recorrido">
-      <div class="color-dot" id="color-dot"></div>
-      <div class="location-name" id="location-name">1. Lancashire</div>
+  <!-- 6. DOCK INFERIOR CON LÍNEA DE TIEMPO Y BOTONES -->
+  <div class="hud-bottom-dock">
+    <div class="timeline-scrubber" id="timeline-scrubber">
+      <div class="timeline-track-line"></div>
+      <!-- Los 13 nodos se generan dinámicamente -->
     </div>
-    <button class="nav-btn" id="next-btn">Adelante ➡</button>
+    <div class="dock-main-row">
+      <button class="nav-pill-btn" id="prev-btn" disabled>⬅ Atrás</button>
+      <div class="destination-center" id="replay-btn" title="Toca para repetir la animación del trayecto">
+        <span class="dest-meta" id="dest-counter">Destino 1 de 13 ↻</span>
+        <div class="dest-title-wrap">
+          <span class="dest-color-orb" id="color-dot"></span>
+          <span class="dest-city-name" id="location-name">Lancashire</span>
+        </div>
+      </div>
+      <button class="nav-pill-btn" id="next-btn">Adelante ➡</button>
+    </div>
   </div>
 
   <script>
     /**
-     * 13 Destinos calibrados con curvas Bézier cúbicas (cp1, cp2) y su color propio.
+     * 13 Destinos de la cronología de Leonora Carrington con curvas Bézier cúbicas (cp1, cp2)
+     * y el color cromático de cada punto en el mapa.
      */
     const CHRONOLOGY = [
-      { id: 1,  city: "Lancashire",       x: 0.089, y: 0.412, color: "#e64833" },
+      { id: 1,  city: "Lancashire",             x: 0.089, y: 0.412, color: "#e64833" },
       {
-        id: 2,  city: "Florencia",        x: 0.148, y: 0.452, color: "#43a047",
+        id: 2,  city: "Florencia",              x: 0.148, y: 0.452, color: "#43a047",
         cp1: { x: 0.112, y: 0.398 }, cp2: { x: 0.138, y: 0.415 }
       },
       {
-        id: 3,  city: "Londres",          x: 0.093, y: 0.428, color: "#29b6f6",
+        id: 3,  city: "Londres",                x: 0.093, y: 0.428, color: "#29b6f6",
         cp1: { x: 0.128, y: 0.468 }, cp2: { x: 0.105, y: 0.455 }
       },
       {
-        id: 4,  city: "París",            x: 0.114, y: 0.419, color: "#26a69a",
+        id: 4,  city: "París",                  x: 0.114, y: 0.419, color: "#26a69a",
         cp1: { x: 0.098, y: 0.412 }, cp2: { x: 0.108, y: 0.408 }
       },
       {
-        id: 5,  city: "Saint-Martin",     x: 0.113, y: 0.453, color: "#ef5350",
+        id: 5,  city: "Saint-Martin d'Ardèche", x: 0.113, y: 0.453, color: "#ef5350",
         cp1: { x: 0.124, y: 0.430 }, cp2: { x: 0.124, y: 0.444 }
       },
       {
-        id: 6,  city: "Santander",        x: 0.138, y: 0.461, color: "#42a5f5",
+        id: 6,  city: "Santander",              x: 0.138, y: 0.461, color: "#42a5f5",
         cp1: { x: 0.120, y: 0.470 }, cp2: { x: 0.130, y: 0.472 }
       },
       {
-        id: 7,  city: "Lisboa",           x: 0.106, y: 0.468, color: "#ffa726",
+        id: 7,  city: "Lisboa",                 x: 0.106, y: 0.468, color: "#ffa726",
         cp1: { x: 0.128, y: 0.484 }, cp2: { x: 0.114, y: 0.484 }
       },
       {
-        id: 8,  city: "Nueva York",       x: 0.864, y: 0.408, color: "#ffee58",
+        id: 8,  city: "Nueva York",             x: 0.864, y: 0.408, color: "#ffee58",
         cp1: { x: 0.275, y: 0.155 }, cp2: { x: 0.695, y: 0.145 }
       },
       {
-        id: 9,  city: "Ciudad de México", x: 0.808, y: 0.483, color: "#ab47bc",
+        id: 9,  city: "Ciudad de México",       x: 0.808, y: 0.483, color: "#ab47bc",
         cp1: { x: 0.862, y: 0.448 }, cp2: { x: 0.838, y: 0.478 }
       },
       {
-        id: 10, city: "Xilitla",          x: 0.823, y: 0.468, color: "#ef5350",
+        id: 10, city: "Xilitla, S.L.P.",        x: 0.823, y: 0.468, color: "#ef5350",
         cp1: { x: 0.805, y: 0.472 }, cp2: { x: 0.812, y: 0.464 }
       },
       {
-        id: 11, city: "Nueva York",       x: 0.873, y: 0.424, color: "#26c6da",
+        id: 11, city: "Nueva York",             x: 0.873, y: 0.424, color: "#26c6da",
         cp1: { x: 0.848, y: 0.462 }, cp2: { x: 0.868, y: 0.445 }
       },
       {
-        id: 12, city: "Chicago",          x: 0.850, y: 0.431, color: "#66bb6a",
+        id: 12, city: "Chicago",                x: 0.850, y: 0.431, color: "#66bb6a",
         cp1: { x: 0.866, y: 0.414 }, cp2: { x: 0.856, y: 0.418 }
       },
       {
-        id: 13, city: "Ciudad de México", x: 0.809, y: 0.513, color: "#ff5252",
+        id: 13, city: "Ciudad de México",       x: 0.809, y: 0.513, color: "#ff5252",
         cp1: { x: 0.822, y: 0.455 }, cp2: { x: 0.805, y: 0.485 }
       }
     ];
 
+    // Referencias DOM
     const sourceImg = document.getElementById("source-map-img");
     const cleanMapCanvas = document.getElementById("clean-map-canvas");
     const cleanCtx = cleanMapCanvas.getContext("2d");
@@ -401,70 +676,134 @@
     const startArBtn = document.getElementById("start-ar-btn");
     const start2dBtn = document.getElementById("start-2d-btn");
     const switchModeBtn = document.getElementById("switch-mode-btn");
-    const scanGuide = document.getElementById("scan-guide");
-    const mapStage = document.getElementById("map-stage");
-    const arContainer = document.getElementById("ar-container");
-    const statusText = document.getElementById("status-text");
+    const rescanBtn = document.getElementById("rescan-btn");
+    const scanOverlay = document.getElementById("scan-overlay");
+    const scanHintText = document.getElementById("scan-hint-text");
 
+    const arStage = document.getElementById("ar-stage");
+    const arVideo = document.getElementById("ar-camera-video");
+    const arWebglContainer = document.getElementById("ar-webgl-container");
+    const map2dStage = document.getElementById("map-2d-stage");
+
+    const statusText = document.getElementById("status-text");
+    const liveDot = document.getElementById("live-dot");
+    const scrubberContainer = document.getElementById("timeline-scrubber");
     const prevBtn = document.getElementById("prev-btn");
     const nextBtn = document.getElementById("next-btn");
     const replayBtn = document.getElementById("replay-btn");
+    const destCounter = document.getElementById("dest-counter");
     const locationName = document.getElementById("location-name");
     const colorDot = document.getElementById("color-dot");
 
+    // Estado de animación
     let currentIndex = 0;
     let previousIndex = null;
     let animStart = performance.now();
     let isTraveling = false;
     let particles = [];
-    let arAnimTexture = null;
-    let arCleanMapTexture = null;
-
     let lastRenderTime = 0;
-    const IDLE_FRAME_INTERVAL = 1000 / 24;
+    const IDLE_FRAME_INTERVAL = 1000 / 30;
     const DURATION = 1350;
 
+    // Estado de Cámara AR y Escena 3D Flotante
+    let arActive = false;
+    let mediaStream = null;
+    let threeRenderer = null;
+    let threeScene = null;
+    let threeCamera = null;
+    let floatingGroup = null;
+    let arCleanMapTexture = null;
+    let arAnimTexture = null;
+    let mapRevealed = false;
+    let targetScale = 0;
+    let currentScale = 0;
+    let targetRotX = 0;
+    let targetRotY = 0;
+
+    // Crear los 13 nodos interactivos en el dock inferior
+    const stepNodes = [];
+    CHRONOLOGY.forEach((item, idx) => {
+      const node = document.createElement("button");
+      node.className = "step-node";
+      node.textContent = item.id;
+      node.title = item.city;
+      node.addEventListener("click", () => {
+        if (idx !== currentIndex) {
+          updateLocation(idx, currentIndex);
+        } else {
+          const origin = currentIndex > 0 ? currentIndex - 1 : null;
+          updateLocation(currentIndex, origin);
+        }
+      });
+      scrubberContainer.appendChild(node);
+      stepNodes.push(node);
+    });
+
     /**
-     * Construye automáticamente el Mapa Flotante Limpio a partir de mapa_surrealista.jpg:
-     * Cubre de forma suave el bloque inferior de los 13 textos históricos usando
-     * el tono original del papel para que el mapa flotante luzca despejado.
+     * Dibuja un rectángulo con esquinas redondeadas compatible con el 100% de navegadores móviles
      */
-    async function buildCleanFloatingMap() {
-      if (!sourceImg.complete) {
-        await new Promise((res) => { sourceImg.onload = res; sourceImg.onerror = res; });
-      }
-
-      const w = cleanMapCanvas.width;
-      const h = cleanMapCanvas.height;
-
-      cleanCtx.clearRect(0, 0, w, h);
-      cleanCtx.drawImage(sourceImg, 0, 0, w, h);
-
-      // Cubrir el listado de los 13 sucesos históricos en la esquina inferior izquierda
-      // con un gradiente que iguala el tono pergamino/grisáceo de esa zona del mapa
-      const patchX = w * 0.06;
-      const patchY = h * 0.705;
-      const patchW = w * 0.49;
-      const patchH = h * 0.255;
-
-      const paperGrad = cleanCtx.createLinearGradient(patchX, patchY, patchX + patchW, patchY + patchH);
-      paperGrad.addColorStop(0, "rgba(154, 152, 143, 0.96)");
-      paperGrad.addColorStop(0.5, "rgba(160, 158, 149, 0.98)");
-      paperGrad.addColorStop(1, "rgba(150, 148, 139, 0.96)");
-
-      cleanCtx.save();
-      cleanCtx.fillStyle = paperGrad;
-      cleanCtx.beginPath();
-      cleanCtx.roundRect(patchX, patchY, patchW, patchH, 18);
-      cleanCtx.fill();
-      cleanCtx.restore();
-
-      if (arCleanMapTexture) {
-        arCleanMapTexture.needsUpdate = true;
-      }
-      statusText.textContent = "Mapa listo";
+    function fillRoundedRect(context, x, y, w, h, r) {
+      context.beginPath();
+      context.moveTo(x + r, y);
+      context.lineTo(x + w - r, y);
+      context.quadraticCurveTo(x + w, y, x + w, y + r);
+      context.lineTo(x + w, y + h - r);
+      context.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      context.lineTo(x + r, y + h);
+      context.quadraticCurveTo(x, y + h, x, y + h - r);
+      context.lineTo(x, y + r);
+      context.quadraticCurveTo(x, y, x + r, y);
+      context.closePath();
+      context.fill();
     }
 
+    /**
+     * Prepara el Mapa Limpio Flotante ocultando la lista de los 13 textos históricos inferiores
+     */
+    async function buildCleanFloatingMap() {
+      try {
+        if (!sourceImg.complete) {
+          await new Promise((res) => {
+            sourceImg.onload = res;
+            sourceImg.onerror = res;
+          });
+        }
+
+        const w = cleanMapCanvas.width;
+        const h = cleanMapCanvas.height;
+        cleanCtx.clearRect(0, 0, w, h);
+
+        if (sourceImg.naturalWidth > 0) {
+          cleanCtx.drawImage(sourceImg, 0, 0, w, h);
+
+          // Parche mimetizado con el tono del papel para ocultar los 13 textos inferiores
+          const patchX = w * 0.055;
+          const patchY = h * 0.702;
+          const patchW = w * 0.50;
+          const patchH = h * 0.265;
+
+          const paperGrad = cleanCtx.createLinearGradient(patchX, patchY, patchX + patchW, patchY + patchH);
+          paperGrad.addColorStop(0, "rgba(153, 151, 142, 0.97)");
+          paperGrad.addColorStop(0.5, "rgba(159, 157, 148, 0.99)");
+          paperGrad.addColorStop(1, "rgba(148, 146, 137, 0.97)");
+
+          cleanCtx.save();
+          cleanCtx.fillStyle = paperGrad;
+          fillRoundedRect(cleanCtx, patchX, patchY, patchW, patchH, 16);
+          cleanCtx.restore();
+        }
+
+        if (arCleanMapTexture) {
+          arCleanMapTexture.needsUpdate = true;
+        }
+      } catch (e) {
+        console.warn("Aviso al preparar lienzo limpio:", e);
+      }
+    }
+
+    /**
+     * Evaluador de Curva Bézier Cúbica
+     */
     function getCubicBezierPoint(p0, p1, p2, p3, t) {
       const u = 1 - t;
       const tt = t * t;
@@ -505,7 +844,7 @@
       particles = [];
       for (let i = 0; i < 28; i++) {
         const angle = (Math.PI * 2 * i) / 28 + (Math.random() - 0.5) * 0.2;
-        const speed = 1.6 + Math.random() * 3.2;
+        const speed = 1.5 + Math.random() * 3.2;
         particles.push({
           x, y,
           vx: Math.cos(angle) * speed,
@@ -517,11 +856,215 @@
       }
     }
 
+    /**
+     * Inicializa la Escena 3D Flotante sobre el video real de la cámara
+     */
+    function initFloating3DScene() {
+      if (threeRenderer) return;
+
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      threeScene = new THREE.Scene();
+      threeCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+      threeCamera.position.set(0, 0, 2.35);
+
+      threeRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+      threeRenderer.setSize(width, height);
+      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      arWebglContainer.innerHTML = "";
+      arWebglContainer.appendChild(threeRenderer.domElement);
+
+      floatingGroup = new THREE.Group();
+      threeScene.add(floatingGroup);
+
+      const aspect = overlayCanvas.height / overlayCanvas.width; // 0.75 (4:3)
+      const planeW = 1.55;
+      const planeH = planeW * aspect;
+
+      // 1. Sombra suave proyectada detrás del mapa flotante
+      const shadowGeo = new THREE.PlaneGeometry(planeW * 1.05, planeH * 1.05);
+      const shadowMat = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0.52,
+        depthWrite: false
+      });
+      const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+      shadowMesh.position.set(0, -0.03, -0.04);
+      floatingGroup.add(shadowMesh);
+
+      // 2. Marco dorado museográfico sutil alrededor del mapa flotante
+      const borderGeo = new THREE.PlaneGeometry(planeW * 1.018, planeH * 1.022);
+      const borderMat = new THREE.MeshBasicMaterial({
+        color: 0xe6c27a,
+        transparent: true,
+        opacity: 0.65
+      });
+      const borderMesh = new THREE.Mesh(borderGeo, borderMat);
+      borderMesh.position.set(0, 0, -0.005);
+      floatingGroup.add(borderMesh);
+
+      // 3. Plano del Mapa Limpio Flotante (cubre las líneas/textos inferiores)
+      arCleanMapTexture = new THREE.CanvasTexture(cleanMapCanvas);
+      arCleanMapTexture.minFilter = THREE.LinearFilter;
+      arCleanMapTexture.magFilter = THREE.LinearFilter;
+
+      const mapGeo = new THREE.PlaneGeometry(planeW, planeH);
+      const mapMat = new THREE.MeshBasicMaterial({ map: arCleanMapTexture });
+      const mapMesh = new THREE.Mesh(mapGeo, mapMat);
+      mapMesh.position.set(0, 0, 0);
+      floatingGroup.add(mapMesh);
+
+      // 4. Plano Transparente Elevado (Z = +0.045) con las rutas punteadas y pulsos en relieve 3D
+      arAnimTexture = new THREE.CanvasTexture(overlayCanvas);
+      arAnimTexture.minFilter = THREE.LinearFilter;
+      arAnimTexture.magFilter = THREE.LinearFilter;
+      arAnimTexture.generateMipmaps = false;
+
+      const animGeo = new THREE.PlaneGeometry(planeW, planeH);
+      const animMat = new THREE.MeshBasicMaterial({
+        map: arAnimTexture,
+        transparent: true,
+        depthWrite: false
+      });
+      const animMesh = new THREE.Mesh(animGeo, animMat);
+      animMesh.position.set(0, 0, 0.045);
+      floatingGroup.add(animMesh);
+
+      // Interacción táctil y de giroscopio para inclinar el mapa flotante en 3D
+      window.addEventListener("pointermove", (e) => {
+        if (!arActive) return;
+        const nx = (e.clientX / window.innerWidth) - 0.5;
+        const ny = (e.clientY / window.innerHeight) - 0.5;
+        targetRotY = nx * 0.28;
+        targetRotX = ny * 0.22;
+      });
+
+      window.addEventListener("deviceorientation", (e) => {
+        if (!arActive || e.gamma === null || e.beta === null) return;
+        const gx = Math.max(-25, Math.min(25, e.gamma)) / 25;
+        const gy = Math.max(-25, Math.min(25, e.beta - 45)) / 25;
+        targetRotY = gx * 0.22;
+        targetRotX = gy * 0.18;
+      });
+
+      window.addEventListener("resize", updateCameraResponsiveness);
+      updateCameraResponsiveness();
+    }
+
+    function updateCameraResponsiveness() {
+      if (!threeRenderer || !threeCamera) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      threeCamera.aspect = w / h;
+      // Ajusta la distancia de la cámara 3D en pantallas verticales (teléfonos) vs horizontales
+      threeCamera.position.z = (w < h) ? 3.15 : 2.15;
+      threeCamera.updateProjectionMatrix();
+      threeRenderer.setSize(w, h);
+    }
+
+    /**
+     * Dispara el escaneo visual y despliega el Mapa Flotante 3D sobre la cámara
+     */
+    function triggerMapScanSequence() {
+      mapRevealed = false;
+      currentScale = 0.01;
+      targetScale = 0;
+      scanOverlay.style.display = "flex";
+      scanOverlay.style.opacity = "1";
+      scanHintText.textContent = "Reconociendo Mapa Surrealista...";
+      statusText.textContent = "Escaneando mural...";
+
+      setTimeout(() => {
+        if (!arActive) return;
+        scanHintText.textContent = "✨ ¡Mapa detectado! Desplegando lienzo 3D...";
+      }, 900);
+
+      setTimeout(() => {
+        if (!arActive) return;
+        mapRevealed = true;
+        targetScale = 1;
+        scanOverlay.style.opacity = "0";
+        setTimeout(() => {
+          if (mapRevealed) scanOverlay.style.display = "none";
+        }, 350);
+        statusText.textContent = "AR Flotante Activo — Usa Atrás / Adelante";
+        // Re-dispara la animación del punto actual al emerger el mapa
+        const origin = currentIndex > 0 ? currentIndex - 1 : null;
+        updateLocation(currentIndex, origin);
+      }, 1550);
+    }
+
+    /**
+     * SOLUCIÓN DEFINITIVA DE CÁMARA:
+     * Solicita el stream de video directamente en el gesto del clic, garantizando
+     * compatibilidad en iOS Safari y Chrome Android sin bloqueos.
+     */
+    async function startARExperience() {
+      welcomeScreen.classList.add("hidden");
+      document.body.classList.add("ar-mode-active");
+      map2dStage.style.display = "none";
+      arStage.style.display = "block";
+      statusText.textContent = "Encendiendo cámara...";
+
+      try {
+        // 1. Solicitar la cámara trasera inmediatamente dentro del clic del usuario
+        if (!mediaStream) {
+          const constraints = {
+            audio: false,
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          };
+          mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+          arVideo.srcObject = mediaStream;
+          await arVideo.play();
+        }
+
+        // 2. Preparar el mapa limpio y la escena 3D flotante
+        await buildCleanFloatingMap();
+        initFloating3DScene();
+
+        arActive = true;
+        liveDot.style.background = "#4ade80";
+        rescanBtn.style.display = "inline-block";
+        switchModeBtn.textContent = "🗺️ Vista 2D";
+
+        // 3. Ejecutar la secuencia de reconocimiento y despliegue del mapa flotante
+        triggerMapScanSequence();
+      } catch (err) {
+        console.error("Error de acceso a cámara:", err);
+        liveDot.style.background = "#f59e0b";
+        open2DMode("Permiso de cámara denegado — Modo 2D");
+      }
+    }
+
+    async function open2DMode(customMessage = "Modo Interactivo 2D") {
+      welcomeScreen.classList.add("hidden");
+      document.body.classList.remove("ar-mode-active");
+
+      arActive = false;
+      scanOverlay.style.display = "none";
+      rescanBtn.style.display = "none";
+      arStage.style.display = "none";
+
+      await buildCleanFloatingMap();
+      map2dStage.style.display = "flex";
+      switchModeBtn.textContent = "📷 Cámara AR";
+      statusText.textContent = customMessage;
+    }
+
+    /**
+     * Bucle principal de renderizado (2D + 3D Flotante)
+     */
     function render(time) {
       requestAnimationFrame(render);
       if (document.hidden) return;
 
-      const highFreqNeeded = isTraveling || particles.length > 0;
+      const highFreqNeeded = isTraveling || particles.length > 0 || arActive;
       if (!highFreqNeeded && (time - lastRenderTime < IDLE_FRAME_INTERVAL)) {
         return;
       }
@@ -530,7 +1073,7 @@
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       const current = CHRONOLOGY[currentIndex];
 
-      // 1. Animación del trayecto punteado activo
+      // 1. Dibujar trayecto punteado activo
       if (previousIndex !== null && previousIndex !== currentIndex) {
         const prev = CHRONOLOGY[previousIndex];
         const elapsed = time - animStart;
@@ -552,17 +1095,17 @@
         }
 
         ctx.strokeStyle = current.color;
-        ctx.lineWidth = 6;
+        ctx.lineWidth = 6.5;
         ctx.lineCap = "round";
         ctx.setLineDash([10, 14]);
         ctx.lineDashOffset = -(time * 0.05);
         ctx.shadowColor = current.color;
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = 18;
         ctx.stroke();
 
-        // Línea central blanca para mayor contraste sobre el mapa flotante
+        // Núcleo blanco de alto contraste
         ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.2;
         ctx.stroke();
         ctx.restore();
 
@@ -573,7 +1116,7 @@
           ctx.arc(head.x * overlayCanvas.width, head.y * overlayCanvas.height, 9, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
           ctx.shadowColor = current.color;
-          ctx.shadowBlur = 20;
+          ctx.shadowBlur = 22;
           ctx.fill();
           ctx.restore();
         } else if (isTraveling) {
@@ -582,7 +1125,7 @@
         }
       }
 
-      // 2. Explosión de partículas del color del destino
+      // 2. Partículas cromáticas al llegar al destino
       if (particles.length > 0) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
@@ -609,7 +1152,7 @@
         ctx.restore();
       }
 
-      // 3. Pulso de brillo cromático del color de la ciudad actual
+      // 3. Pulso de brillo del color de la ciudad actual
       const cx = current.x * overlayCanvas.width;
       const cy = current.y * overlayCanvas.height;
       const beat = 0.5 + 0.5 * Math.sin(time * 0.0055);
@@ -617,11 +1160,11 @@
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
 
-      const outerRadius = 36 + beat * 30;
+      const outerRadius = 38 + beat * 32;
       const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, outerRadius);
       grad.addColorStop(0, "#ffffff");
       grad.addColorStop(0.28, hexToRgba(current.color, 0.95));
-      grad.addColorStop(0.65, hexToRgba(current.color, 0.4));
+      grad.addColorStop(0.65, hexToRgba(current.color, 0.42));
       grad.addColorStop(1, hexToRgba(current.color, 0));
 
       ctx.fillStyle = grad;
@@ -629,10 +1172,9 @@
       ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Dos ondas expansivas del color de la ciudad
       for (let w = 0; w < 2; w++) {
         const waveCycle = ((time * 0.001) + w * 0.5) % 1;
-        const waveRadius = 14 + waveCycle * 54;
+        const waveRadius = 14 + waveCycle * 56;
         ctx.beginPath();
         ctx.arc(cx, cy, waveRadius, 0, Math.PI * 2);
         ctx.strokeStyle = hexToRgba(current.color, (1 - waveCycle) * 0.9);
@@ -641,14 +1183,14 @@
       }
       ctx.restore();
 
-      // Esfera central con el número del punto
+      // Marcador central numerado
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, 13, 0, Math.PI * 2);
       ctx.fillStyle = current.color;
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 3;
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
+      ctx.shadowColor = "rgba(0,0,0,0.85)";
       ctx.shadowBlur = 8;
       ctx.fill();
       ctx.stroke();
@@ -660,11 +1202,28 @@
       ctx.fillText(String(current.id), cx, cy + 1);
       ctx.restore();
 
-      if (arAnimTexture) {
-        arAnimTexture.needsUpdate = true;
+      // 4. Actualizar escena 3D flotante si estamos en modo Cámara AR
+      if (arActive && threeRenderer && floatingGroup) {
+        if (arAnimTexture) arAnimTexture.needsUpdate = true;
+
+        // Interpolación suave de aparición y levitación 3D
+        currentScale += (targetScale - currentScale) * 0.1;
+        floatingGroup.scale.set(currentScale, currentScale, currentScale);
+
+        const floatY = Math.sin(time * 0.0022) * 0.025;
+        const floatZ = Math.cos(time * 0.0018) * 0.015;
+        floatingGroup.position.set(0, floatY, floatZ);
+
+        floatingGroup.rotation.x += (targetRotX - floatingGroup.rotation.x) * 0.08;
+        floatingGroup.rotation.y += (targetRotY - floatingGroup.rotation.y) * 0.08;
+
+        threeRenderer.render(threeScene, threeCamera);
       }
     }
 
+    /**
+     * Actualiza el destino activo y sincroniza el scrubber de 13 nodos
+     */
     function updateLocation(newIndex, originIndex = currentIndex) {
       previousIndex = originIndex;
       currentIndex = newIndex;
@@ -676,12 +1235,30 @@
         emitParticles(loc.x * overlayCanvas.width, loc.y * overlayCanvas.height, loc.color);
       }
 
-      locationName.textContent = `${loc.id}. ${loc.city}`;
+      destCounter.textContent = `Destino ${loc.id} de ${CHRONOLOGY.length} ↻`;
+      locationName.textContent = loc.city;
       colorDot.style.backgroundColor = loc.color;
       colorDot.style.color = loc.color;
 
       prevBtn.disabled = currentIndex === 0;
       nextBtn.disabled = currentIndex === CHRONOLOGY.length - 1;
+
+      // Actualizar colores y estado de los 13 nodos de la línea de tiempo
+      stepNodes.forEach((node, idx) => {
+        const itemColor = CHRONOLOGY[idx].color;
+        node.classList.toggle("active", idx === currentIndex);
+        node.classList.toggle("visited", idx <= currentIndex);
+        if (idx === currentIndex) {
+          node.style.backgroundColor = itemColor;
+          node.style.boxShadow = `0 0 12px ${itemColor}`;
+        } else if (idx < currentIndex) {
+          node.style.backgroundColor = hexToRgba(itemColor, 0.45);
+          node.style.boxShadow = "none";
+        } else {
+          node.style.backgroundColor = "#1b1a17";
+          node.style.boxShadow = "none";
+        }
+      });
     }
 
     prevBtn.addEventListener("click", () => {
@@ -697,143 +1274,9 @@
       updateLocation(currentIndex, origin);
     });
 
-    /**
-     * Motor WebAR con Doble Plano Flotante 3D:
-     * - Plano 1 (Z = 0.04): Mapa Limpio Flotante que cubre el mural real.
-     * - Plano 2 (Z = 0.085): Capa de Animación con rutas punteadas y pulsos en relieve.
-     */
-    const PRECOMPILED_MIND_PATH = "./target/mapa_surrealista.mind";
-    let arActive = false;
-    let arInstance = null;
-
-    async function resolveTargetSource() {
-      try {
-        const res = await fetch(PRECOMPILED_MIND_PATH, { method: "HEAD", cache: "no-cache" });
-        if (res.ok) {
-          return PRECOMPILED_MIND_PATH;
-        }
-      } catch (_) {}
-
-      statusText.textContent = "Procesando mapa por primera vez...";
-      const compiler = new window.MINDAR.IMAGE.Compiler();
-      await compiler.compileImageTargets([sourceImg], (p) => {
-        statusText.textContent = `Preparando AR: ${Math.round(p)}%`;
-      });
-      const buffer = await compiler.exportData();
-      return URL.createObjectURL(new Blob([buffer], { type: "application/octet-stream" }));
-    }
-
-    async function startARExperience() {
-      welcomeScreen.style.opacity = "0";
-      setTimeout(() => { welcomeScreen.style.display = "none"; }, 400);
-
-      try {
-        statusText.textContent = "Iniciando cámara AR...";
-        await buildCleanFloatingMap();
-
-        if (!arInstance) {
-          const targetSrc = await resolveTargetSource();
-
-          arInstance = new window.MINDAR.IMAGE.MindARThree({
-            container: arContainer,
-            imageTargetSrc: targetSrc,
-            filterMinCF: 0.001,
-            filterBeta: 0.008,
-            missTolerance: 6,
-            warmupTolerance: 4
-          });
-
-          const { renderer, scene, camera } = arInstance;
-          const anchor = arInstance.addAnchor(0);
-          const aspect = overlayCanvas.height / overlayCanvas.width;
-
-          // Sombra trasera suave para despegar el mapa flotante de la pared del museo
-          const shadowMat = new THREE.MeshBasicMaterial({
-            color: 0x000000,
-            transparent: true,
-            opacity: 0.55,
-            depthWrite: false
-          });
-          const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.06, aspect * 1.06), shadowMat);
-          shadowPlane.position.set(0, -0.015, 0.01);
-          anchor.group.add(shadowPlane);
-
-          // PLANO 1 (Z = 0.04): Mapa Limpio Flotante
-          arCleanMapTexture = new THREE.CanvasTexture(cleanMapCanvas);
-          arCleanMapTexture.minFilter = THREE.LinearFilter;
-          arCleanMapTexture.magFilter = THREE.LinearFilter;
-
-          const cleanMapPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(1.02, aspect * 1.02),
-            new THREE.MeshBasicMaterial({ map: arCleanMapTexture })
-          );
-          cleanMapPlane.position.set(0, 0, 0.04);
-          anchor.group.add(cleanMapPlane);
-
-          // PLANO 2 (Z = 0.085): Animaciones flotando por delante del mapa limpio
-          arAnimTexture = new THREE.CanvasTexture(overlayCanvas);
-          arAnimTexture.minFilter = THREE.LinearFilter;
-          arAnimTexture.magFilter = THREE.LinearFilter;
-          arAnimTexture.generateMipmaps = false;
-
-          const animPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(1.02, aspect * 1.02),
-            new THREE.MeshBasicMaterial({
-              map: arAnimTexture,
-              transparent: true,
-              depthWrite: false
-            })
-          );
-          animPlane.position.set(0, 0, 0.085);
-          anchor.group.add(animPlane);
-
-          anchor.onTargetFound = () => {
-            scanGuide.style.display = "none";
-            statusText.textContent = "Mapa Flotante Activo — Usa Atrás / Adelante";
-          };
-
-          anchor.onTargetLost = () => {
-            scanGuide.style.display = "flex";
-            statusText.textContent = "Apunta al Mapa Surrealista";
-          };
-
-          await arInstance.start();
-          renderer.setAnimationLoop(() => renderer.render(scene, camera));
-        } else {
-          await arInstance.start();
-        }
-
-        arActive = true;
-        mapStage.style.display = "none";
-        arContainer.style.display = "block";
-        scanGuide.style.display = "flex";
-        switchModeBtn.textContent = "Ver Mapa 2D";
-        statusText.textContent = "Apunta al Mapa Surrealista";
-      } catch (err) {
-        console.error(err);
-        open2DMode();
-        statusText.textContent = "Cámara no disponible — Modo 2D Activo";
-      }
-    }
-
-    async function open2DMode() {
-      welcomeScreen.style.opacity = "0";
-      setTimeout(() => { welcomeScreen.style.display = "none"; }, 400);
-
-      if (arInstance && arActive) {
-        arInstance.stop();
-      }
-      arActive = false;
-      scanGuide.style.display = "none";
-      arContainer.style.display = "none";
-      await buildCleanFloatingMap();
-      mapStage.style.display = "flex";
-      switchModeBtn.textContent = "📷 Activar Cámara AR";
-      statusText.textContent = "Vista Interactiva 2D";
-    }
-
     startArBtn.addEventListener("click", startARExperience);
-    start2dBtn.addEventListener("click", open2DMode);
+    start2dBtn.addEventListener("click", () => open2DMode());
+    rescanBtn.addEventListener("click", triggerMapScanSequence);
 
     switchModeBtn.addEventListener("click", () => {
       if (arActive) {
@@ -843,7 +1286,7 @@
       }
     });
 
-    // Inicializar animación y lienzo limpio
+    // Inicialización base
     buildCleanFloatingMap();
     updateLocation(0, null);
     requestAnimationFrame(render);
