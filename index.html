@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mapa Surrealista WebAR - Leonora Carrington</title>
+    <!-- A-Frame and MindAR library scripts -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        #ui-container {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .ui-btn {
+            pointer-events: auto;
+            background: rgba(20, 20, 20, 0.75);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .ui-btn:active {
+            transform: scale(0.95);
+            background: rgba(50, 50, 50, 0.9);
+        }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="instructions">Apunta con la cámara al "Mapa Surrealista" de Leonora Carrington</div>
+
+    <div id="ui-container">
+        <button class="ui-btn" id="play-btn">▶ Iniciar Secuencia Histórica</button>
+        <button class="ui-btn" id="reset-btn">Reiniciar</button>
+    </div>
+
+    <!-- MindAR Scene Container -->
+    <a-scene 
+        mindar-image="imageTargetSrc: #;" 
+        color-space="sRGB" 
+        renderer="colorManagement: true, physicallyCorrectLights: true" 
+        vr-mode-ui="enabled: false" 
+        device-orientation-permission-ui="enabled: false">
+        
+        <a-assets>
+            <!-- Puedes reemplazar esta textura con la imagen binaria compilada de MindAR de tu mapa físico -->
+            <img id="map-texture" src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=80">
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <!-- Target Entity (Índice 0 del mapa físico) -->
+        <a-entity mindar-image-target="targetIndex: 0">
+            
+            <!-- Plano base del mapa virtual superpuesto si se requiere ampliar el render -->
+            <a-plane position="0 0 0" rotation="0 0 0" width="1" height="0.75" material="src: #map-texture; transparent: true; opacity: 0.9;" shadow="cast: false; receive: true"></a-plane>
+
+            <!-- Contenedor de Animaciones y Cronología Interactiva -->
+            <a-entity id="chronology-container" position="0 0 0.02">
+                
+                <!-- Punto 1: Inglaterra (Nacimiento - Estrella pulsante) -->
+                <a-entity id="step-1" position="-0.35 0.25 0" visible="false">
+                    <a-ring color="#FFD700" radius-inner="0.02" radius-outer="0.03" animation="property: scale; to: 1.5 1.5 1.5; dir: alternate; loop: true; dur: 800"></a-ring>
+                    <a-text value="1. Inglaterra (Nacimiento)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFD700"></a-text>
+                </a-entity>
+
+                <!-- Trayecto y Punto 2-3: Viaje a Londres / Lápiz mágico -->
+                <a-entity id="step-3" position="-0.30 0.20 0" visible="false">
+                    <a-cylinder color="#A020F0" height="0.08" radius="0.005" rotation="0 0 45"></a-cylinder>
+                    <a-text value="3. Londres (Dibujo Mágico)" position="-0.05 0.05 0" scale="0.15 0.15 0.15" color="#DA70D6"></a-text>
+                </a-entity>
+
+                <!-- Punto 4 y 5: París (Destello y Línea Rosa) -->
+                <a-entity id="step-5" position="-0.22 0.15 0" visible="false">
+                    <a-ring color="#FF69B4" radius-inner="0.015" radius-outer="0.025" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000"></a-ring>
+                    <a-text value="5. Paris (Surrealismo)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FF69B4"></a-text>
+                </a-entity>
+
+                <!-- Punto 6: España (Cruz Roja) -->
+                <a-entity id="step-6" position="-0.15 0.05 0" visible="false">
+                    <a-box color="red" width="0.03" height="0.008" depth="0.001"></a-box>
+                    <a-box color="red" width="0.008" height="0.03" depth="0.001"></a-box>
+                    <a-text value="6. España (Internamiento)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FF0000"></a-text>
+                </a-entity>
+
+                <!-- Punto 7: Lisboa (Paloma Blanca) -->
+                <a-entity id="step-7" position="-0.08 0.02 0" visible="false">
+                    <a-sphere color="#FFFFFF" radius="0.015" animation="property: position; to: 0 0.02 0.02; dir: alternate; loop: true; dur: 1000"></a-sphere>
+                    <a-text value="7. Lisboa (Escape)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFFFFF"></a-text>
+                </a-entity>
+
+                <!-- Punto 8: Nueva York (Espejito y Partículas) -->
+                <a-entity id="step-8" position="0.15 0.18 0" visible="false">
+                    <a-ring color="#00FFFF" radius-inner="0.02" radius-outer="0.025" material="side: double"></a-ring>
+                    <a-text value="8. Nueva York (Espejo)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#00FFFF"></a-text>
+                </a-entity>
+
+                <!-- Punto 9: México (Cactus Columnar y Huellas Verdes) -->
+                <a-entity id="step-9" position="0.25 -0.05 0" visible="false">
+                    <a-cylinder color="#2E8B57" height="0.04" radius="0.008"></a-cylinder>
+                    <a-text value="9. Mexico (Llegada)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#2E8B57"></a-text>
+                </a-entity>
+
+                <!-- Punto 10: Xilitla (Orquídea Rosa y Pétalos) -->
+                <a-entity id="step-10" position="0.28 -0.12 0" visible="false">
+                    <a-torus color="#FF1493" arc="270" radius="0.015" radius-tubular="0.003"></a-torus>
+                    <a-text value="10. Xilitla" position="-0.03 0.03 0" scale="0.15 0.15 0.15" color="#FF1493"></a-text>
+                </a-entity>
+
+                <!-- Punto 11 & 12: Nueva York y Chicago -->
+                <a-entity id="step-12" position="0.18 0.10 0" visible="false">
+                    <a-sphere color="#FFA500" radius="0.012"></a-sphere>
+                    <a-text value="11-12. NY & Chicago" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFA500"></a-text>
+                </a-entity>
+
+                <!-- Punto Final: CDMX (Cruz Blanca / Fallecimiento) -->
+                <a-entity id="step-final" position="0.22 -0.02 0" visible="false">
+                    <a-box color="#FFFFFF" width="0.03" height="0.008" depth="0.001"></a-box>
+                    <a-box color="#FFFFFF" width="0.008" height="0.03" depth="0.001"></a-box>
+                    <a-text value="CDMX (Legado Eterno)" position="-0.05 0.04 0" scale="0.15 0.15 0.15" color="#FFFFFF"></a-text>
+                </a-entity>
+
+            </a-entity>
+
+        </a-entity>
+    </a-scene>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const playBtn = document.getElementById("play-btn");
+            const resetBtn = document.getElementById("reset-btn");
+
+            const steps = [
+                document.getElementById("step-1"),
+                document.getElementById("step-3"),
+                document.getElementById("step-5"),
+                document.getElementById("step-6"),
+                document.getElementById("step-7"),
+                document.getElementById("step-8"),
+                document.getElementById("step-9"),
+                document.getElementById("step-10"),
+                document.getElementById("step-12"),
+                document.getElementById("step-final")
+            ];
+
+            let currentStep = 0;
+            let sequenceInterval = null;
+
+            playBtn.addEventListener("click", () => {
+                playBtn.style.display = "none";
+                runSequence();
+            });
+
+            resetBtn.addEventListener("click", () => {
+                if (sequenceInterval) clearInterval(sequenceInterval);
+                steps.forEach(s => s.setAttribute("visible", "false"));
+                currentStep = 0;
+                playBtn.style.display = "block";
+            });
+
+            function runSequence() {
+                if (currentStep < steps.length) {
+                    steps[currentStep].setAttribute("visible", "true");
+                    currentStep++;
+                    sequenceInterval = setTimeout(runSequence, 1200);
+                } else {
+                    playBtn.style.display = "block";
+                    playBtn.textContent = "▶ Reproducir de Nuevo";
+                    currentStep = 0;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
