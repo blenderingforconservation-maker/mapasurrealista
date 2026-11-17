@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mapa Surrealista 1929 — Vector & WebAR</title>
+  <title>Mapa Surrealista 1929 - WebAR Interactivo</title>
 
-  <!-- Three.js y MindAR para reconocimiento del target JPG -->
+  <!-- Dependencias Core: Three.js y MindAR -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-three.prod.js"></script>
 
@@ -22,44 +22,41 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #0e0e0d;
-      font-family: 'Georgia', 'Times New Roman', serif;
-      color: #f4f0e6;
+      background-color: #0a0a0a;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
     }
 
-    /* Escenario Principal 100% Vectorial */
+    /* Vista 2D / Fallback */
     #map-stage {
       position: fixed;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at center, #1f1e1b 0%, #0b0b0a 100%);
+      background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
       z-index: 2;
-      padding: 14px 14px 96px 14px;
-      transition: opacity 0.4s ease;
+      padding: 20px 20px 100px 20px;
+      transition: opacity 0.3s ease;
     }
 
     #map-wrapper {
       position: relative;
-      width: min(96vw, 1280px);
+      width: 100%;
+      max-width: 1200px;
       aspect-ratio: 4 / 3;
-      max-height: calc(100vh - 115px);
-      background: radial-gradient(ellipse at 52% 45%, #d8d4c7 0%, #b7b2a3 65%, #938e80 100%);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), inset 0 0 80px rgba(0, 0, 0, 0.22);
-      border-radius: 12px;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.18);
     }
 
-    /* Mapa Vectorial SVG limpio (sin líneas de recorrido ni textos de sucesos) */
-    #vector-map-svg {
+    #base-map-img {
       width: 100%;
       height: 100%;
+      object-fit: contain;
       display: block;
     }
 
-    /* Lienzo de animación de trayectos y brillos pulsantes */
+    /* Canvas para vectores y partículas superpuestas */
     #overlay-canvas {
       position: absolute;
       inset: 0;
@@ -68,12 +65,7 @@
       pointer-events: none;
     }
 
-    /* Imagen target oculta usada únicamente para compilar el rastreo WebAR */
-    #hidden-target-img {
-      display: none;
-    }
-
-    /* Contenedor de Cámara WebAR */
+    /* Contenedor WebAR */
     #ar-container {
       position: fixed;
       inset: 0;
@@ -81,12 +73,12 @@
       display: none;
     }
 
-    /* Barra superior */
+    /* Interfaz de Usuario Minimalista */
     .top-bar {
       position: fixed;
-      top: 14px;
-      left: 16px;
-      right: 16px;
+      top: 15px;
+      left: 15px;
+      right: 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -94,660 +86,384 @@
       pointer-events: none;
     }
 
-    .status-pill, .mode-btn {
+    .status-badge, .ar-toggle-btn {
       pointer-events: auto;
-      background: rgba(15, 15, 14, 0.82);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(244, 240, 230, 0.22);
-      color: #f4f0e6;
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      letter-spacing: 0.4px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-    }
-
-    .mode-btn {
-      cursor: pointer;
-      font-family: inherit;
-      font-weight: bold;
-      color: #ffd166;
-      transition: transform 0.15s ease, background 0.2s ease;
-    }
-
-    .mode-btn:hover {
-      background: rgba(35, 34, 30, 0.92);
-    }
-
-    /* Barra inferior minimalista (sin texto de sucesos históricos) */
-    .hud-bar {
-      position: fixed;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(92vw, 560px);
-      background: rgba(16, 16, 15, 0.9);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 999px;
-      padding: 10px 14px;
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
-    }
-
-    .nav-btn {
+      background: rgba(15, 15, 15, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
       padding: 10px 18px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: rgba(255, 255, 255, 0.07);
-      color: #f4f0e6;
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: bold;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .ar-toggle-btn {
       cursor: pointer;
+      color: #00d2ff;
+      border-color: rgba(0, 210, 255, 0.3);
       transition: all 0.2s ease;
     }
 
-    .nav-btn:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.18);
+    .ar-toggle-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Controles de Navegación */
+    .hud-controls {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 15, 15, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 40px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
     }
 
     .nav-btn:disabled {
-      opacity: 0.3;
+      opacity: 0.4;
       cursor: not-allowed;
     }
 
-    .destination-pill {
+    .nav-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .location-display {
       display: flex;
       align-items: center;
       gap: 10px;
+      padding: 5px 15px;
       cursor: pointer;
-      padding: 4px 10px;
-      border-radius: 999px;
-      transition: background 0.2s ease;
     }
 
-    .destination-pill:hover {
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .step-dot {
-      width: 28px;
-      height: 28px;
+    .color-dot {
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 0.85rem;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .location-name {
       color: #fff;
-      transition: box-shadow 0.3s ease, background-color 0.3s ease;
-    }
-
-    .city-label {
-      font-size: 0.95rem;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      color: #f4f0e6;
-      white-space: nowrap;
-    }
-
-    /* Estilos internos del SVG vectorial */
-    .coastline {
-      fill: rgba(226, 222, 210, 0.42);
-      stroke: #23221f;
-      stroke-width: 3.2;
-      stroke-linejoin: round;
-      stroke-linecap: round;
-    }
-
-    .equator-line {
-      fill: none;
-      stroke: #1e1d1a;
-      stroke-width: 4.5;
-      stroke-linecap: round;
-    }
-
-    .map-title {
-      fill: #3b3934;
-      font-family: 'Georgia', serif;
-      font-style: italic;
-    }
-
-    .geo-label-lg {
-      fill: #2c2a26;
-      font-family: 'Arial', sans-serif;
-      font-weight: 700;
-      letter-spacing: 6px;
-      font-size: 28px;
-    }
-
-    .geo-label-md {
-      fill: #2c2a26;
-      font-family: 'Arial', sans-serif;
-      font-weight: 700;
-      letter-spacing: 2px;
-      font-size: 18px;
-    }
-
-    .geo-label-sm {
-      fill: #383530;
-      font-family: 'Arial Narrow', 'Arial', sans-serif;
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: 1px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      min-width: 120px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <!-- Imagen original oculta para compilar el target de MindAR -->
-  <img id="hidden-target-img" src="./target/mapa_surrealista.jpg" crossorigin="anonymous" alt="Target AR" />
-
-  <!-- Barra superior -->
   <div class="top-bar">
-    <div class="status-pill" id="status-text">Modo Vectorial Activo — 13 Destinos</div>
-    <button class="mode-btn" id="toggle-ar-btn">📷 Activar Cámara AR</button>
+    <div class="status-badge" id="status-text">Sistema AR Iniciado</div>
+    <button class="ar-toggle-btn" id="toggle-ar-btn">Activar Cámara AR</button>
   </div>
 
-  <!-- Escenario del Mapa 100% Vectorial -->
+  <!-- Vista 2D de respaldo y previsualización -->
   <div id="map-stage">
     <div id="map-wrapper">
-      <svg id="vector-map-svg" viewBox="0 0 1600 1200" preserveAspectRatio="xMidYMid meet">
-        <!-- Títulos superiores del Mapa Surrealista -->
-        <text x="140" y="68" class="map-title" font-size="42" font-weight="bold">Mapa Surrealista</text>
-        <text x="530" y="56" class="map-title" font-size="20">1929</text>
-        <text x="150" y="168" fill="#3b3934" font-family="Georgia, serif" font-size="36">Cronología básica</text>
-        <text x="520" y="164" class="map-title" font-size="64" font-weight="bold">Leonora Carrington</text>
-
-        <!-- Groenlandia -->
-        <path class="coastline" d="M 1425,115 C 1450,140 1445,185 1465,215 C 1485,245 1470,295 1495,320 C 1530,335 1565,305 1590,275 L 1595,110 Z" />
-
-        <!-- América del Norte Surrealista (Alaska, Labrador, México) -->
-        <path class="coastline" d="M 885,315 C 915,275 975,260 1030,275 C 1075,285 1110,235 1160,210 C 1205,190 1265,215 1300,255 C 1320,285 1315,345 1345,365 C 1385,370 1430,335 1465,365 C 1485,395 1460,445 1425,475 C 1385,505 1340,515 1315,545 C 1295,575 1320,615 1355,635 C 1375,645 1360,665 1330,660 C 1285,650 1255,610 1245,565 C 1230,510 1190,465 1150,435 C 1105,400 1045,425 995,410 C 940,395 895,365 885,315 Z" />
-
-        <!-- Eurasia Surrealista (Europa, Rusia, China, Tíbet, India, Imperio Otomano) -->
-        <path class="coastline" d="M 115,480 C 135,455 175,465 205,450 C 235,430 265,390 305,375 C 345,360 390,310 435,285 C 485,260 545,255 595,285 C 635,310 695,295 755,305 C 805,315 855,340 875,380 C 885,415 835,445 795,460 C 745,480 695,510 655,545 C 625,575 635,630 615,665 C 585,695 545,675 515,645 C 495,620 485,575 455,595 C 435,615 445,665 425,685 C 395,675 375,630 345,605 C 310,580 265,595 235,575 C 205,555 155,565 125,535 C 105,515 100,495 115,480 Z" />
-
-        <!-- África -->
-        <path class="coastline" d="M 220,585 C 255,575 305,585 325,615 C 340,645 315,690 290,715 C 265,735 245,705 225,675 C 205,645 195,600 220,585 Z" />
-
-        <!-- Archipiélago Bismarck y Nueva Guinea -->
-        <path class="coastline" d="M 715,665 C 765,625 835,625 875,660 C 905,690 905,745 875,785 C 835,820 775,805 735,775 C 695,745 685,695 715,665 Z" />
-        <path class="coastline" d="M 695,790 C 735,775 785,800 825,830 C 855,850 835,885 795,875 C 745,860 705,835 675,810 Z" />
-
-        <!-- Australia y Nueva Zelanda -->
-        <path class="coastline" d="M 745,865 C 775,855 800,885 790,915 C 775,935 735,925 735,895 Z" />
-        <path class="coastline" d="M 925,945 C 945,935 960,965 945,995 C 930,1025 910,1010 915,975 Z" />
-
-        <!-- Isla de Pascua, Perú y Tierra del Fuego -->
-        <path class="coastline" d="M 1275,785 C 1315,775 1345,815 1330,855 C 1315,885 1265,875 1265,835 Z" />
-        <path class="coastline" d="M 1395,660 C 1455,650 1515,665 1545,695 C 1525,735 1485,775 1465,825 C 1450,855 1425,835 1410,795 C 1395,755 1375,695 1395,660 Z" />
-
-        <!-- Línea sinuosa del Ecuador -->
-        <path class="equator-line" d="M 110,695 C 230,655 360,685 480,730 C 610,775 740,605 880,665 C 990,715 1130,725 1270,695 C 1380,675 1470,655 1545,660" />
-
-        <!-- Tipografía geográfica del Mapa Surrealista -->
-        <text x="380" y="455" class="geo-label-lg" transform="rotate(-22 380 455)">R U S I A</text>
-        <text x="965" y="385" class="geo-label-lg" transform="rotate(18 965 385)">A L A S K A</text>
-        <text x="1345" y="465" class="geo-label-md">LABRADOR</text>
-        <text x="1480" y="238" class="geo-label-md">GROENLANDIA</text>
-        <text x="680" y="575" class="geo-label-lg">O C E A N O</text>
-        <text x="710" y="615" class="geo-label-lg">P A C Í F I C O</text>
-        <text x="495" y="610" class="geo-label-md">CHINA</text>
-        <text x="480" y="562" class="geo-label-sm">TÍBET</text>
-        <text x="402" y="555" class="geo-label-sm">AFGANISTÁN</text>
-        <text x="365" y="828" class="geo-label-lg">I N D I A</text>
-        <text x="235" y="648" class="geo-label-md">ÁFRICA</text>
-        <text x="190" y="535" class="geo-label-sm">PARÍS</text>
-        <text x="122" y="622" class="geo-label-md">OCÉANO</text>
-        <text x="130" y="768" class="geo-label-md">ATLÁNTICO</text>
-        <text x="328" y="772" class="geo-label-md">OCEANO</text>
-        <text x="772" y="732" class="geo-label-sm">ARCHIPIÉLAGO</text>
-        <text x="780" y="752" class="geo-label-sm">BISMARCK</text>
-        <text x="795" y="902" class="geo-label-sm">AUSTRALIA</text>
-        <text x="960" y="968" class="geo-label-sm">NUEVA ZELANDA</text>
-        <text x="1198" y="898" class="geo-label-sm">ISLA DE PASCUA</text>
-        <text x="1378" y="868" class="geo-label-sm">TIERRA DE FUEGO</text>
-        <text x="1410" y="700" class="geo-label-md">PERÚ</text>
-        <text x="1318" y="642" class="geo-label-sm">MÉXICO</text>
-        <text x="1420" y="565" class="geo-label-md">OCÉANO</text>
-        <text x="1410" y="638" class="geo-label-md">ATLÁNTICO</text>
-      </svg>
-
-      <!-- Canvas transparente superpuesto para la animación de trayectos y brillos -->
+      <img id="base-map-img" src="./target/mapa_surrealista.jpg" alt="Mapa Base" crossorigin="anonymous" />
       <canvas id="overlay-canvas" width="1600" height="1200"></canvas>
     </div>
   </div>
 
-  <!-- Contenedor WebAR -->
   <div id="ar-container"></div>
 
-  <!-- Controles inferiores minimalistas (sin textos de sucesos históricos) -->
-  <div class="hud-bar">
-    <button class="nav-btn" id="prev-btn" disabled>⬅ Atrás</button>
-    <div class="destination-pill" id="replay-pill" title="Haz clic para repetir el trayecto y brillo">
-      <span class="step-dot" id="step-dot">1</span>
-      <span class="city-label" id="city-label">Lancashire</span>
+  <!-- Interfaz de Control (Sin textos descriptivos) -->
+  <div class="hud-controls">
+    <button class="nav-btn" id="prev-btn" disabled>Atrás</button>
+    <div class="location-display" id="replay-btn" title="Repetir animación">
+      <div class="color-dot" id="color-dot"></div>
+      <div class="location-name" id="location-name">Lancashire</div>
     </div>
-    <button class="nav-btn" id="next-btn">Adelante ➡</button>
+    <button class="nav-btn" id="next-btn">Siguiente</button>
   </div>
 
   <script>
     /**
-     * 13 Destinos en el Mapa Surrealista (sin textos históricos, con su color cromático propio)
+     * Coordenadas de los 13 sucesos y colores cromáticos exactos extraídos del mapa de 1929.
      */
-    const DESTINATIONS = [
-      { id: 1,  city: "Lancashire",             x: 0.089, y: 0.412, color: "#e64833" },
-      { id: 2,  city: "Florencia",              x: 0.148, y: 0.452, color: "#3b8ea5", ctrl: { x: 0.128, y: 0.390 } },
-      { id: 3,  city: "Londres",                x: 0.093, y: 0.428, color: "#2d9cdb", ctrl: { x: 0.115, y: 0.472 } },
-      { id: 4,  city: "París",                  x: 0.114, y: 0.419, color: "#27ae60", ctrl: { x: 0.104, y: 0.402 } },
-      { id: 5,  city: "Saint-Martin d'Ardèche", x: 0.113, y: 0.453, color: "#eb3b5a", ctrl: { x: 0.125, y: 0.436 } },
-      { id: 6,  city: "Santander",              x: 0.138, y: 0.461, color: "#45aaf2", ctrl: { x: 0.126, y: 0.476 } },
-      { id: 7,  city: "Lisboa",                 x: 0.106, y: 0.468, color: "#fa8231", ctrl: { x: 0.122, y: 0.488 } },
-      { id: 8,  city: "Nueva York",             x: 0.864, y: 0.408, color: "#fed330", ctrl: { x: 0.485, y: 0.135 } },
-      { id: 9,  city: "Ciudad de México",       x: 0.808, y: 0.483, color: "#a55eea", ctrl: { x: 0.858, y: 0.468 } },
-      { id: 10, city: "Xilitla",                x: 0.823, y: 0.468, color: "#eb2f06", ctrl: { x: 0.804, y: 0.466 } },
-      { id: 11, city: "Nueva York",             x: 0.873, y: 0.424, color: "#0fb9b1", ctrl: { x: 0.864, y: 0.456 } },
-      { id: 12, city: "Chicago",                x: 0.850, y: 0.431, color: "#20bf6b", ctrl: { x: 0.862, y: 0.412 } },
-      { id: 13, city: "Ciudad de México",       x: 0.809, y: 0.513, color: "#ff3838", ctrl: { x: 0.812, y: 0.465 } }
+    const CHRONOLOGY = [
+      { id: 1,  city: "Lancashire",             x: 0.089, y: 0.412, color: "#d94a38" },
+      { id: 2,  city: "Florencia",              x: 0.148, y: 0.452, color: "#377d33", ctrl: { x: 0.128, y: 0.395 } },
+      { id: 3,  city: "Londres",                x: 0.093, y: 0.428, color: "#2e86c1" },
+      { id: 4,  city: "París",                  x: 0.114, y: 0.419, color: "#1e8449" },
+      { id: 5,  city: "Saint-Martin",           x: 0.113, y: 0.453, color: "#c0392b" },
+      { id: 6,  city: "Santander",              x: 0.138, y: 0.461, color: "#5499c7", ctrl: { x: 0.126, y: 0.472 } },
+      { id: 7,  city: "Lisboa",                 x: 0.106, y: 0.468, color: "#e67e22", ctrl: { x: 0.122, y: 0.485 } },
+      { id: 8,  city: "Nueva York",             x: 0.864, y: 0.408, color: "#f1c40f", ctrl: { x: 0.485, y: 0.145 } },
+      { id: 9,  city: "Ciudad de México",       x: 0.808, y: 0.483, color: "#8e44ad", ctrl: { x: 0.855, y: 0.465 } },
+      { id: 10, city: "Xilitla",                x: 0.823, y: 0.468, color: "#b03a2e" },
+      { id: 11, city: "Nueva York",             x: 0.873, y: 0.424, color: "#17a589" },
+      { id: 12, city: "Chicago",                x: 0.850, y: 0.431, color: "#239b56" },
+      { id: 13, city: "Ciudad de México",       x: 0.809, y: 0.513, color: "#cb4335", ctrl: { x: 0.812, y: 0.465 } }
     ];
 
     const canvas = document.getElementById("overlay-canvas");
     const ctx = canvas.getContext("2d");
 
-    let currentIndex = 0;
-    let previousIndex = null;
-    let animStartTime = performance.now();
-    let arrivalBurstTime = performance.now();
-    let arrivedTriggered = true;
-    const TRAVEL_DURATION = 1450;
-
-    // Partículas de destello al llegar a cada ciudad
-    const particles = [];
-
-    const stepDot = document.getElementById("step-dot");
-    const cityLabel = document.getElementById("city-label");
+    // UI Elements
     const prevBtn = document.getElementById("prev-btn");
     const nextBtn = document.getElementById("next-btn");
-    const replayPill = document.getElementById("replay-pill");
-    const toggleArBtn = document.getElementById("toggle-ar-btn");
+    const replayBtn = document.getElementById("replay-btn");
+    const locationName = document.getElementById("location-name");
+    const colorDot = document.getElementById("color-dot");
     const statusText = document.getElementById("status-text");
+    const toggleArBtn = document.getElementById("toggle-ar-btn");
 
+    let currentIndex = 0;
+    let previousIndex = null;
+    let animStart = performance.now();
+    let particles = [];
     let arTexture = null;
+    const DURATION = 1200; // ms
 
-    // Convierte color HEX a RGBA
-    function hexToRgba(hex, alpha) {
-      const clean = hex.replace("#", "");
-      const r = parseInt(clean.substring(0, 2), 16);
-      const g = parseInt(clean.substring(2, 4), 16);
-      const b = parseInt(clean.substring(4, 6), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    // Evalúa curva Bézier cuadrática
-    function getQuadraticPoint(p0, pc, p1, t) {
-      const invT = 1 - t;
+    // Utilidad: Curvas Bézier
+    function getBezierPoint(p0, p1, p2, t) {
+      const u = 1 - t;
       return {
-        x: invT * invT * p0.x + 2 * invT * t * pc.x + t * t * p1.x,
-        y: invT * invT * p0.y + 2 * invT * t * pc.y + t * t * p1.y
+        x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+        y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y
       };
     }
 
-    // Genera partículas luminosas del color de la ciudad al llegar al punto
-    function spawnArrivalParticles(normX, normY, color) {
-      const cx = normX * canvas.width;
-      const cy = normY * canvas.height;
-      for (let i = 0; i < 26; i++) {
-        const angle = (Math.PI * 2 * i) / 26 + (Math.random() - 0.5) * 0.25;
-        const speed = 1.2 + Math.random() * 3.4;
+    // Hex a RGBA para brillos
+    function hexToRgba(hex, a) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    // Generador del destello de partículas
+    function emitParticles(x, y, color) {
+      particles = []; // Limpiar anteriores
+      for (let i = 0; i < 20; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 2;
         particles.push({
-          x: cx,
-          y: cy,
+          x, y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          radius: 2.5 + Math.random() * 3.5,
-          color: color,
-          alpha: 1,
-          decay: 0.014 + Math.random() * 0.015
+          radius: 2 + Math.random() * 2,
+          color,
+          alpha: 1
         });
       }
     }
 
-    // Dibuja y actualiza las partículas de brillo
-    function updateAndDrawParticles() {
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.97;
-        p.vy *= 0.97;
-        p.alpha -= p.decay;
+    // Lógica principal de renderizado
+    function render(time) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const current = CHRONOLOGY[currentIndex];
 
-        if (p.alpha <= 0) {
-          particles.splice(i, 1);
-          continue;
+      if (previousIndex !== null && previousIndex !== currentIndex) {
+        const prev = CHRONOLOGY[previousIndex];
+        const elapsed = time - animStart;
+        const progress = Math.min(elapsed / DURATION, 1);
+        
+        // Función de aceleración easeOutQuart
+        const easeProgress = 1 - Math.pow(1 - progress, 4);
+
+        const ctrl = current.ctrl || prev.ctrl || {
+          x: (prev.x + current.x) / 2,
+          y: Math.min(prev.y, current.y) - 0.1
+        };
+
+        // Dibujar línea de trayecto dinámico
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(prev.x * canvas.width, prev.y * canvas.height);
+        
+        const steps = 60;
+        const currentSteps = Math.floor(steps * easeProgress);
+        
+        for (let i = 1; i <= currentSteps; i++) {
+          const pt = getBezierPoint(prev, ctrl, current, i / steps);
+          ctx.lineTo(pt.x * canvas.width, pt.y * canvas.height);
         }
 
+        ctx.strokeStyle = current.color;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.setLineDash([8, 12]);
+        ctx.lineDashOffset = -(time * 0.05);
+        ctx.shadowColor = current.color;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.restore();
+
+        // Disparar destello al llegar
+        if (progress >= 1 && particles.length === 0) {
+          emitParticles(current.x * canvas.width, current.y * canvas.height, current.color);
+        }
+      }
+
+      // Dibujar partículas activas
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.02;
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          return;
+        }
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = hexToRgba(p.color, p.alpha);
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 14;
         ctx.fill();
-      }
+      });
       ctx.restore();
-    }
 
-    // Dibuja únicamente el trayecto activo con línea punteada brillante y cabeza de cometa
-    function drawAnimatedTrajectory(p0, pc, p1, progress, color, now) {
-      const steps = 100;
-      const maxStep = Math.floor(steps * progress);
-      if (maxStep < 1) return;
+      // Dibujar Pulso Cromático Constante en el destino
+      const cx = current.x * canvas.width;
+      const cy = current.y * canvas.height;
+      const pulseSize = 10 + Math.sin(time * 0.005) * 5;
 
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(p0.x * canvas.width, p0.y * canvas.height);
-
-      for (let i = 1; i <= maxStep; i++) {
-        const t = i / steps;
-        const pt = getQuadraticPoint(p0, pc, p1, t);
-        ctx.lineTo(pt.x * canvas.width, pt.y * canvas.height);
-      }
-
-      // Halo exterior de la línea punteada
-      ctx.strokeStyle = hexToRgba(color, 0.95);
-      ctx.lineWidth = 6;
-      ctx.lineCap = "round";
-      ctx.setLineDash([10, 14]);
-      ctx.lineDashOffset = -(now * 0.045);
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 18;
-      ctx.stroke();
-
-      // Núcleo luminoso punteado
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2.2;
-      ctx.stroke();
-      ctx.restore();
-
-      // Cabeza viajera con destello intenso mientras se desplaza
-      if (progress < 1) {
-        const head = getQuadraticPoint(p0, pc, p1, progress);
-        const hx = head.x * canvas.width;
-        const hy = head.y * canvas.height;
-
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        const grad = ctx.createRadialGradient(hx, hy, 2, hx, hy, 34);
-        grad.addColorStop(0, "#ffffff");
-        grad.addColorStop(0.35, hexToRgba(color, 0.9));
-        grad.addColorStop(1, hexToRgba(color, 0));
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(hx, hy, 34, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    // Dibuja el brillo pulsante del color del punto o ciudad al llegar al destino
-    function drawCityGlowPulse(point, now) {
-      const cx = point.x * canvas.width;
-      const cy = point.y * canvas.height;
-
-      ctx.save();
-
-      // 1. Brillo radial pulsante continuo (efecto Bloom del color de la ciudad)
-      const pulseBeat = 0.5 + 0.5 * Math.sin(now * 0.0055);
-      const glowRadius = 52 + pulseBeat * 38;
-
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      const radialGlow = ctx.createRadialGradient(cx, cy, 4, cx, cy, glowRadius);
-      radialGlow.addColorStop(0, "#ffffff");
-      radialGlow.addColorStop(0.22, hexToRgba(point.color, 0.95));
-      radialGlow.addColorStop(0.58, hexToRgba(point.color, 0.45));
-      radialGlow.addColorStop(1, hexToRgba(point.color, 0));
-
-      ctx.fillStyle = radialGlow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, pulseSize, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(current.color, 0.4);
+      ctx.shadowColor = current.color;
+      ctx.shadowBlur = 20;
       ctx.fill();
 
-      // 2. Tres ondas luminosas concéntricas del color del punto
-      for (let i = 0; i < 3; i++) {
-        const wave = ((now * 0.0009 + i * 0.33) % 1);
-        const r = 16 + wave * 68;
-        const alpha = Math.pow(1 - wave, 1.5) * 0.9;
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.strokeStyle = hexToRgba(point.color, alpha);
-        ctx.lineWidth = 3.5;
-        ctx.shadowColor = point.color;
-        ctx.shadowBlur = 16;
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // 3. Esfera central del destino con borde brillante
+      // Núcleo sólido
       ctx.beginPath();
-      ctx.arc(cx, cy, 15, 0, Math.PI * 2);
-      ctx.fillStyle = point.color;
-      ctx.shadowColor = point.color;
-      ctx.shadowBlur = 22;
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = current.color;
       ctx.fill();
-
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "#ffffff";
-      ctx.stroke();
-
-      // Número del punto
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 14px Georgia, serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(String(point.id), cx, cy + 1);
-
       ctx.restore();
+
+      if (arTexture) arTexture.needsUpdate = true;
+      requestAnimationFrame(render);
     }
 
-    // Bucle principal de renderizado
-    function renderLoop(now) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const currentDest = DESTINATIONS[currentIndex];
-
-      if (previousIndex !== null && previousIndex !== currentIndex) {
-        const prevDest = DESTINATIONS[previousIndex];
-        const elapsed = now - animStartTime;
-        const rawProgress = Math.min(1, elapsed / TRAVEL_DURATION);
-
-        // Curva de aceleración suave
-        const progress = rawProgress < 0.5
-          ? 4 * rawProgress * rawProgress * rawProgress
-          : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
-
-        const ctrlSource = currentIndex > previousIndex ? currentDest.ctrl : prevDest.ctrl;
-        const pc = ctrlSource || {
-          x: (prevDest.x + currentDest.x) / 2,
-          y: Math.min(prevDest.y, currentDest.y) - 0.05
-        };
-
-        // Punto de origen tenue
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(prevDest.x * canvas.width, prevDest.y * canvas.height, 8, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(prevDest.color, 0.65);
-        ctx.shadowColor = prevDest.color;
-        ctx.shadowBlur = 10;
-        ctx.fill();
-        ctx.restore();
-
-        // Trayecto punteado activo
-        drawAnimatedTrajectory(prevDest, pc, currentDest, progress, currentDest.color, now);
-
-        // Al llegar al destino se dispara la explosión de partículas y el pulso de brillo
-        if (progress >= 0.98) {
-          if (!arrivedTriggered) {
-            arrivedTriggered = true;
-            arrivalBurstTime = now;
-            spawnArrivalParticles(currentDest.x, currentDest.y, currentDest.color);
-          }
-          drawCityGlowPulse(currentDest, now);
-        }
-      } else {
-        drawCityGlowPulse(currentDest, now);
-      }
-
-      updateAndDrawParticles();
-
-      if (arTexture) {
-        arTexture.needsUpdate = true;
-      }
-
-      requestAnimationFrame(renderLoop);
-    }
-
-    // Cambiar de destino
-    function goToDestination(newIndex, fromIndex = currentIndex) {
-      if (newIndex < 0 || newIndex >= DESTINATIONS.length) return;
-
-      previousIndex = fromIndex;
+    // Navegación
+    function updateLocation(newIndex) {
+      previousIndex = currentIndex;
       currentIndex = newIndex;
-      animStartTime = performance.now();
-      arrivedTriggered = (fromIndex === null || fromIndex === newIndex);
-
-      const dest = DESTINATIONS[currentIndex];
-      if (arrivedTriggered) {
-        spawnArrivalParticles(dest.x, dest.y, dest.color);
-      }
-
-      stepDot.textContent = dest.id;
-      stepDot.style.backgroundColor = dest.color;
-      stepDot.style.boxShadow = `0 0 16px ${dest.color}`;
-      cityLabel.textContent = dest.city;
+      animStart = performance.now();
+      particles = []; // Resetea partículas
+      
+      const loc = CHRONOLOGY[currentIndex];
+      locationName.textContent = loc.city;
+      colorDot.style.backgroundColor = loc.color;
+      colorDot.style.color = loc.color;
 
       prevBtn.disabled = currentIndex === 0;
-      nextBtn.disabled = currentIndex === DESTINATIONS.length - 1;
+      nextBtn.disabled = currentIndex === CHRONOLOGY.length - 1;
     }
 
     prevBtn.addEventListener("click", () => {
-      if (currentIndex > 0) goToDestination(currentIndex - 1, currentIndex);
+      if (currentIndex > 0) updateLocation(currentIndex - 1);
     });
 
     nextBtn.addEventListener("click", () => {
-      if (currentIndex < DESTINATIONS.length - 1) goToDestination(currentIndex + 1, currentIndex);
+      if (currentIndex < CHRONOLOGY.length - 1) updateLocation(currentIndex + 1);
     });
 
-    replayPill.addEventListener("click", () => {
-      const origin = currentIndex > 0 ? currentIndex - 1 : null;
-      goToDestination(currentIndex, origin);
+    replayBtn.addEventListener("click", () => {
+      updateLocation(currentIndex);
     });
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowRight" && currentIndex < DESTINATIONS.length - 1) {
-        goToDestination(currentIndex + 1, currentIndex);
-      } else if (e.key === "ArrowLeft" && currentIndex > 0) {
-        goToDestination(currentIndex - 1, currentIndex);
-      }
-    });
-
-    // Integración con Cámara WebAR sobre ./target/mapa_surrealista.jpg
-    let arStarted = false;
+    // Motor WebAR - Tres.js & MindAR
     let arActive = false;
-    let mindarThree = null;
-
+    let arCompiler = null;
+    
     toggleArBtn.addEventListener("click", async () => {
-      const mapStage = document.getElementById("map-stage");
-      const arContainer = document.getElementById("ar-container");
+      const stage = document.getElementById("map-stage");
+      const arCont = document.getElementById("ar-container");
 
       if (!arActive) {
         try {
           toggleArBtn.disabled = true;
-          statusText.textContent = "Compilando mapa target para AR...";
+          statusText.textContent = "Compilando Target AR...";
 
-          if (!arStarted) {
-            const img = document.getElementById("hidden-target-img");
-            await img.decode();
-
+          if (!arCompiler) {
+            const img = document.getElementById("base-map-img");
+            if (!img.complete) await new Promise(r => img.onload = r);
+            
             const compiler = new window.MINDAR.IMAGE.Compiler();
-            await compiler.compileImageTargets([img], (progress) => {
-              statusText.textContent = `Procesando target: ${Math.round(progress)}%`;
+            await compiler.compileImageTargets([img], (p) => {
+              statusText.textContent = `Procesando: ${Math.round(p)}%`;
             });
-            const exportedBuffer = await compiler.exportData();
-            const blob = new Blob([exportedBuffer]);
-            const targetUrl = URL.createObjectURL(blob);
+            const buffer = await compiler.exportData();
+            const blob = new Blob([buffer]);
+            const targetSrc = URL.createObjectURL(blob);
 
-            mindarThree = new window.MINDAR.IMAGE.MindARThree({
-              container: arContainer,
-              imageTargetSrc: targetUrl
+            arCompiler = new window.MINDAR.IMAGE.MindARThree({
+              container: arCont,
+              imageTargetSrc: targetSrc
             });
 
-            const { renderer, scene, camera } = mindarThree;
-            const anchor = mindarThree.addAnchor(0);
+            const { renderer, scene, camera } = arCompiler;
+            const anchor = arCompiler.addAnchor(0);
 
+            // Vinculación del Canvas 2D al plano 3D
             arTexture = new THREE.CanvasTexture(canvas);
             const aspect = canvas.height / canvas.width;
-            const planeGeo = new THREE.PlaneGeometry(1, aspect);
-            const planeMat = new THREE.MeshBasicMaterial({
-              map: arTexture,
-              transparent: true,
-              depthWrite: false
-            });
-            const overlayMesh = new THREE.Mesh(planeGeo, planeMat);
-            anchor.group.add(overlayMesh);
+            const mesh = new THREE.Mesh(
+              new THREE.PlaneGeometry(1, aspect),
+              new THREE.MeshBasicMaterial({ map: arTexture, transparent: true })
+            );
+            anchor.group.add(mesh);
 
-            anchor.onTargetFound = () => {
-              statusText.textContent = "Mapa reconocido — Pulso cromático activo";
-            };
-            anchor.onTargetLost = () => {
-              statusText.textContent = "Apunta la cámara al Mapa Surrealista";
-            };
+            anchor.onTargetFound = () => statusText.textContent = "Target Detectado";
+            anchor.onTargetLost = () => statusText.textContent = "Buscando Target...";
 
-            await mindarThree.start();
-            renderer.setAnimationLoop(() => {
-              renderer.render(scene, camera);
-            });
-            arStarted = true;
+            await arCompiler.start();
+            renderer.setAnimationLoop(() => renderer.render(scene, camera));
           } else {
-            await mindarThree.start();
+            await arCompiler.start();
           }
 
           arActive = true;
-          mapStage.style.opacity = "0";
-          mapStage.style.pointerEvents = "none";
-          arContainer.style.display = "block";
-          toggleArBtn.textContent = "🗺️ Vista Vectorial";
-          statusText.textContent = "Apunta la cámara al Mapa Surrealista";
-        } catch (err) {
-          console.error(err);
-          statusText.textContent = "Sin cámara — Vista Vectorial Activa";
+          stage.style.display = "none";
+          arCont.style.display = "block";
+          toggleArBtn.textContent = "Volver a Vista Web";
+        } catch (e) {
+          statusText.textContent = "Error al iniciar cámara.";
+          console.error(e);
         } finally {
           toggleArBtn.disabled = false;
         }
       } else {
-        if (mindarThree) mindarThree.stop();
+        if (arCompiler) arCompiler.stop();
         arActive = false;
-        arContainer.style.display = "none";
-        mapStage.style.opacity = "1";
-        mapStage.style.pointerEvents = "auto";
-        toggleArBtn.textContent = "📷 Activar Cámara AR";
-        statusText.textContent = "Modo Vectorial Activo — 13 Destinos";
+        stage.style.display = "flex";
+        arCont.style.display = "none";
+        toggleArBtn.textContent = "Activar Cámara AR";
+        statusText.textContent = "Sistema 2D Activo";
       }
     });
 
-    // Inicia en el punto 1 con destello cromático inmediato
-    goToDestination(0, null);
-    requestAnimationFrame(renderLoop);
+    // Inicializar
+    updateLocation(0);
+    requestAnimationFrame(render);
   </script>
 </body>
 </html>
