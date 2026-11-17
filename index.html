@@ -102,7 +102,7 @@
         <button class="carrington-btn" id="reset-btn" style="display:none;">Reiniciar</button>
     </div>
 
-    <!-- Escena MindAR con target local -->
+    <!-- Escena MindAR -->
     <a-scene 
         mindar-image="imageTargetSrc: ./targets/mapa_surrealista.mind; uiScanning: yes;" 
         color-space="sRGB" 
@@ -112,10 +112,10 @@
         
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- Target Entity asociado al mapa físico -->
+        <!-- Target Entity asociado al mapa -->
         <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
             
-            <!-- Puntos Interactivos Limpios (Sin líneas de viaje) -->
+            <!-- Contenedor del Mapa (Solo puntos interactivos limpios, sin líneas de viaje) -->
             <a-entity id="chronology-canvas" position="0 0 0.01">
                 
                 <!-- Punto 1: Inglaterra - Estrella Alquímica Dorada -->
@@ -192,7 +192,7 @@
 
             </a-entity>
 
-            <!-- Atmósfera Inmersiva: Mariposas y Luciernagas volando en la sala virtual -->
+            <!-- Atmósfera Inmersiva: Mariposas y Luciérnagas volando en la sala virtual -->
             <a-entity id="sala-atmosfera">
                 <a-sphere position="-0.4 0.3 0.05" radius="0.003" color="#ffd700" material="shader: flat" animation="property: position; to: 0.4 0.4 0.15; dir: alternate; loop: true; dur: 3500"></a-sphere>
                 <a-sphere position="0.3 0.2 0.08" radius="0.0025" color="#ffff88" material="shader: flat" animation="property: position; to: -0.3 -0.2 0.02; dir: alternate; loop: true; dur: 4200"></a-sphere>
@@ -260,7 +260,7 @@
                 if (synth) synth.cancel();
             });
 
-            playBtn.addEventListener("click", () => {
+playBtn.addEventListener("click", () => {
                 playBtn.style.display = "none";
                 resetBtn.style.display = "block";
                 currentStepIndex = 0;
