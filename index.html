@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mapa Surrealista WebAR - Animación Alquímica y Atmósfera</title>
+    <title>Mapa Surrealista WebAR - Leonora Carrington</title>
     <!-- A-Frame y MindAR v1.2.5 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -102,10 +102,7 @@
         <button class="carrington-btn" id="reset-btn" style="display:none;">Reiniciar</button>
     </div>
 
-    <!-- Elemento de Audio sintético/narrativo mediante Web Audio API integrado -->
-    <audio id="narration-audio" preload="auto"></audio>
-
-    <!-- Escena MindAR -->
+    <!-- Escena MindAR con target local -->
     <a-scene 
         mindar-image="imageTargetSrc: ./targets/mapa_surrealista.mind; uiScanning: yes;" 
         color-space="sRGB" 
@@ -115,10 +112,10 @@
         
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- Target Entity asociado al mapa -->
+        <!-- Target Entity asociado al mapa físico -->
         <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
             
-            <!-- Contenedor del Mapa (Solo puntos interactivos limpios, sin líneas de viaje) -->
+            <!-- Puntos Interactivos Limpios (Sin líneas de viaje) -->
             <a-entity id="chronology-canvas" position="0 0 0.01">
                 
                 <!-- Punto 1: Inglaterra - Estrella Alquímica Dorada -->
@@ -197,12 +194,10 @@
 
             <!-- Atmósfera Inmersiva: Mariposas y Luciernagas volando en la sala virtual -->
             <a-entity id="sala-atmosfera">
-                <!-- Luciernagas (Puntos dorados parpadeantes flotando alrededor del mapa) -->
                 <a-sphere position="-0.4 0.3 0.05" radius="0.003" color="#ffd700" material="shader: flat" animation="property: position; to: 0.4 0.4 0.15; dir: alternate; loop: true; dur: 3500"></a-sphere>
                 <a-sphere position="0.3 0.2 0.08" radius="0.0025" color="#ffff88" material="shader: flat" animation="property: position; to: -0.3 -0.2 0.02; dir: alternate; loop: true; dur: 4200"></a-sphere>
                 <a-sphere position="0.0 -0.3 0.06" radius="0.003" color="#ffd700" material="shader: flat" animation="property: position; to: 0.2 0.3 0.1; dir: alternate; loop: true; dur: 3000"></a-sphere>
 
-                <!-- Mariposas virtuales estilizadas (Planos cruzados con movimiento oscilatorio) -->
                 <a-entity position="-0.2 -0.2 0.1" animation="property: position; to: 0.3 0.2 0.05; dir: alternate; loop: true; dur: 5000">
                     <a-plane width="0.02" height="0.015" color="#ff69b4" material="side: double; transparent: true; opacity: 0.8" rotation="0 45 25"></a-plane>
                 </a-entity>
@@ -243,7 +238,7 @@
 
             function speakText(text) {
                 if (synth) {
-                    synth.cancel(); // Detener locución previa
+                    synth.cancel();
                     let utterance = new SpeechSynthesisUtterance(text);
                     utterance.lang = 'es-MX';
                     utterance.rate = 0.95;
@@ -287,10 +282,7 @@
                     steps[currentStepIndex].el.setAttribute("visible", "true");
                     let currentLabel = steps[currentStepIndex].label;
                     statusDisplay.textContent = currentLabel;
-                    
-                    // Narración de audio sintética profesional en vivo
                     speakText(currentLabel);
-
                     currentStepIndex++;
                     sequenceTimer = setTimeout(runChronology, 2200);
                 } else {
