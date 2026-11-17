@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mapa Surrealista 1929 - Cronología Leonora Carrington</title>
+  <title>Mapa Surrealista 1929 — Vector & WebAR</title>
 
-  <!-- Three.js y MindAR para reconocimiento de imagen en WebAR -->
+  <!-- Three.js y MindAR para reconocimiento del target JPG -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-three.prod.js"></script>
 
@@ -22,48 +22,55 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #141413;
-      font-family: 'Georgia', serif;
-      color: #f5f2eb;
+      background-color: #0e0e0d;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      color: #f4f0e6;
     }
 
-    /* Contenedor de Vista Mapa Interactivo (2D / Fallback directo sobre el JPG) */
+    /* Escenario Principal 100% Vectorial */
     #map-stage {
       position: fixed;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at center, #262522 0%, #111110 100%);
+      background: radial-gradient(circle at center, #1f1e1b 0%, #0b0b0a 100%);
       z-index: 2;
-      padding: 12px 12px 155px 12px;
-      transition: opacity 0.35s ease;
+      padding: 14px 14px 96px 14px;
+      transition: opacity 0.4s ease;
     }
 
     #map-wrapper {
       position: relative;
-      max-width: 100%;
-      max-height: 100%;
+      width: min(96vw, 1280px);
       aspect-ratio: 4 / 3;
-      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
-      border-radius: 8px;
+      max-height: calc(100vh - 115px);
+      background: radial-gradient(ellipse at 52% 45%, #d8d4c7 0%, #b7b2a3 65%, #938e80 100%);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), inset 0 0 80px rgba(0, 0, 0, 0.22);
+      border-radius: 12px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.18);
     }
 
-    #base-map-img {
+    /* Mapa Vectorial SVG limpio (sin líneas de recorrido ni textos de sucesos) */
+    #vector-map-svg {
       width: 100%;
       height: 100%;
       display: block;
-      object-fit: contain;
     }
 
+    /* Lienzo de animación de trayectos y brillos pulsantes */
     #overlay-canvas {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       pointer-events: none;
+    }
+
+    /* Imagen target oculta usada únicamente para compilar el rastreo WebAR */
+    #hidden-target-img {
+      display: none;
     }
 
     /* Contenedor de Cámara WebAR */
@@ -77,9 +84,9 @@
     /* Barra superior */
     .top-bar {
       position: fixed;
-      top: 12px;
-      left: 12px;
-      right: 12px;
+      top: 14px;
+      left: 16px;
+      right: 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -89,15 +96,15 @@
 
     .status-pill, .mode-btn {
       pointer-events: auto;
-      background: rgba(20, 20, 18, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(230, 215, 185, 0.3);
-      color: #f5f2eb;
-      padding: 8px 14px;
+      background: rgba(15, 15, 14, 0.82);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(244, 240, 230, 0.22);
+      color: #f4f0e6;
+      padding: 8px 16px;
       border-radius: 999px;
       font-size: 0.82rem;
-      letter-spacing: 0.3px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      letter-spacing: 0.4px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
     }
 
     .mode-btn {
@@ -108,258 +115,246 @@
       transition: transform 0.15s ease, background 0.2s ease;
     }
 
-    .mode-btn:active {
-      transform: scale(0.96);
+    .mode-btn:hover {
+      background: rgba(35, 34, 30, 0.92);
     }
 
-    /* Panel de control inferior para los 13 sucesos */
-    .hud-panel {
+    /* Barra inferior minimalista (sin texto de sucesos históricos) */
+    .hud-bar {
       position: fixed;
-      bottom: 14px;
+      bottom: 16px;
       left: 50%;
       transform: translateX(-50%);
-      width: min(94vw, 680px);
-      background: rgba(22, 21, 19, 0.92);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(230, 215, 185, 0.28);
-      border-radius: 14px;
-      padding: 14px 18px;
-      z-index: 20;
-      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65);
-    }
-
-    .event-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 6px;
-    }
-
-    .step-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 28px;
-      height: 28px;
-      padding: 0 8px;
+      width: min(92vw, 560px);
+      background: rgba(16, 16, 15, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 999px;
-      font-weight: bold;
-      font-size: 0.85rem;
-      color: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
-    }
-
-    .event-location {
-      font-size: 0.95rem;
-      font-weight: bold;
-      color: #ebd9b4;
-    }
-
-    .event-counter {
-      margin-left: auto;
-      font-size: 0.78rem;
-      color: #aaa396;
-    }
-
-    .event-description {
-      font-size: 0.92rem;
-      line-height: 1.38;
-      color: #f3efe6;
-      min-height: 2.7em;
-      margin-bottom: 12px;
-    }
-
-    .controls-row {
+      padding: 10px 14px;
+      z-index: 20;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
     }
 
     .nav-btn {
-      flex: 1;
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: 1px solid rgba(235, 217, 180, 0.35);
-      background: rgba(255, 255, 255, 0.08);
-      color: #f5f2eb;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.07);
+      color: #f4f0e6;
       font-family: inherit;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: bold;
       cursor: pointer;
-      transition: background 0.2s ease, opacity 0.2s ease, transform 0.1s ease;
+      transition: all 0.2s ease;
     }
 
     .nav-btn:hover:not(:disabled) {
-      background: rgba(235, 217, 180, 0.2);
-    }
-
-    .nav-btn:active:not(:disabled) {
-      transform: scale(0.98);
+      background: rgba(255, 255, 255, 0.18);
     }
 
     .nav-btn:disabled {
-      opacity: 0.35;
+      opacity: 0.3;
       cursor: not-allowed;
     }
 
-    .replay-btn {
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(235, 217, 180, 0.25);
-      background: rgba(255, 209, 102, 0.12);
-      color: #ffd166;
-      font-size: 0.85rem;
+    .destination-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 999px;
+      transition: background 0.2s ease;
+    }
+
+    .destination-pill:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: #fff;
+      transition: box-shadow 0.3s ease, background-color 0.3s ease;
+    }
+
+    .city-label {
+      font-size: 0.95rem;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      color: #f4f0e6;
+      white-space: nowrap;
+    }
+
+    /* Estilos internos del SVG vectorial */
+    .coastline {
+      fill: rgba(226, 222, 210, 0.42);
+      stroke: #23221f;
+      stroke-width: 3.2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .equator-line {
+      fill: none;
+      stroke: #1e1d1a;
+      stroke-width: 4.5;
+      stroke-linecap: round;
+    }
+
+    .map-title {
+      fill: #3b3934;
+      font-family: 'Georgia', serif;
+      font-style: italic;
+    }
+
+    .geo-label-lg {
+      fill: #2c2a26;
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      letter-spacing: 6px;
+      font-size: 28px;
+    }
+
+    .geo-label-md {
+      fill: #2c2a26;
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 18px;
+    }
+
+    .geo-label-sm {
+      fill: #383530;
+      font-family: 'Arial Narrow', 'Arial', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Barra de estado y selector de modo AR / Mapa -->
+  <!-- Imagen original oculta para compilar el target de MindAR -->
+  <img id="hidden-target-img" src="./target/mapa_surrealista.jpg" crossorigin="anonymous" alt="Target AR" />
+
+  <!-- Barra superior -->
   <div class="top-bar">
-    <div class="status-pill" id="status-text">Cronología interactiva: Leonora Carrington</div>
-    <button class="mode-btn" id="toggle-ar-btn">📷 Escaneo AR (Cámara)</button>
+    <div class="status-pill" id="status-text">Modo Vectorial Activo — 13 Destinos</div>
+    <button class="mode-btn" id="toggle-ar-btn">📷 Activar Cámara AR</button>
   </div>
 
-  <!-- Escenario del Mapa (muestra target/mapa_surrealista.jpg + animación de trayectos) -->
+  <!-- Escenario del Mapa 100% Vectorial -->
   <div id="map-stage">
     <div id="map-wrapper">
-      <img id="base-map-img" src="./target/mapa_surrealista.jpg" alt="Mapa Surrealista 1929" crossorigin="anonymous" />
+      <svg id="vector-map-svg" viewBox="0 0 1600 1200" preserveAspectRatio="xMidYMid meet">
+        <!-- Títulos superiores del Mapa Surrealista -->
+        <text x="140" y="68" class="map-title" font-size="42" font-weight="bold">Mapa Surrealista</text>
+        <text x="530" y="56" class="map-title" font-size="20">1929</text>
+        <text x="150" y="168" fill="#3b3934" font-family="Georgia, serif" font-size="36">Cronología básica</text>
+        <text x="520" y="164" class="map-title" font-size="64" font-weight="bold">Leonora Carrington</text>
+
+        <!-- Groenlandia -->
+        <path class="coastline" d="M 1425,115 C 1450,140 1445,185 1465,215 C 1485,245 1470,295 1495,320 C 1530,335 1565,305 1590,275 L 1595,110 Z" />
+
+        <!-- América del Norte Surrealista (Alaska, Labrador, México) -->
+        <path class="coastline" d="M 885,315 C 915,275 975,260 1030,275 C 1075,285 1110,235 1160,210 C 1205,190 1265,215 1300,255 C 1320,285 1315,345 1345,365 C 1385,370 1430,335 1465,365 C 1485,395 1460,445 1425,475 C 1385,505 1340,515 1315,545 C 1295,575 1320,615 1355,635 C 1375,645 1360,665 1330,660 C 1285,650 1255,610 1245,565 C 1230,510 1190,465 1150,435 C 1105,400 1045,425 995,410 C 940,395 895,365 885,315 Z" />
+
+        <!-- Eurasia Surrealista (Europa, Rusia, China, Tíbet, India, Imperio Otomano) -->
+        <path class="coastline" d="M 115,480 C 135,455 175,465 205,450 C 235,430 265,390 305,375 C 345,360 390,310 435,285 C 485,260 545,255 595,285 C 635,310 695,295 755,305 C 805,315 855,340 875,380 C 885,415 835,445 795,460 C 745,480 695,510 655,545 C 625,575 635,630 615,665 C 585,695 545,675 515,645 C 495,620 485,575 455,595 C 435,615 445,665 425,685 C 395,675 375,630 345,605 C 310,580 265,595 235,575 C 205,555 155,565 125,535 C 105,515 100,495 115,480 Z" />
+
+        <!-- África -->
+        <path class="coastline" d="M 220,585 C 255,575 305,585 325,615 C 340,645 315,690 290,715 C 265,735 245,705 225,675 C 205,645 195,600 220,585 Z" />
+
+        <!-- Archipiélago Bismarck y Nueva Guinea -->
+        <path class="coastline" d="M 715,665 C 765,625 835,625 875,660 C 905,690 905,745 875,785 C 835,820 775,805 735,775 C 695,745 685,695 715,665 Z" />
+        <path class="coastline" d="M 695,790 C 735,775 785,800 825,830 C 855,850 835,885 795,875 C 745,860 705,835 675,810 Z" />
+
+        <!-- Australia y Nueva Zelanda -->
+        <path class="coastline" d="M 745,865 C 775,855 800,885 790,915 C 775,935 735,925 735,895 Z" />
+        <path class="coastline" d="M 925,945 C 945,935 960,965 945,995 C 930,1025 910,1010 915,975 Z" />
+
+        <!-- Isla de Pascua, Perú y Tierra del Fuego -->
+        <path class="coastline" d="M 1275,785 C 1315,775 1345,815 1330,855 C 1315,885 1265,875 1265,835 Z" />
+        <path class="coastline" d="M 1395,660 C 1455,650 1515,665 1545,695 C 1525,735 1485,775 1465,825 C 1450,855 1425,835 1410,795 C 1395,755 1375,695 1395,660 Z" />
+
+        <!-- Línea sinuosa del Ecuador -->
+        <path class="equator-line" d="M 110,695 C 230,655 360,685 480,730 C 610,775 740,605 880,665 C 990,715 1130,725 1270,695 C 1380,675 1470,655 1545,660" />
+
+        <!-- Tipografía geográfica del Mapa Surrealista -->
+        <text x="380" y="455" class="geo-label-lg" transform="rotate(-22 380 455)">R U S I A</text>
+        <text x="965" y="385" class="geo-label-lg" transform="rotate(18 965 385)">A L A S K A</text>
+        <text x="1345" y="465" class="geo-label-md">LABRADOR</text>
+        <text x="1480" y="238" class="geo-label-md">GROENLANDIA</text>
+        <text x="680" y="575" class="geo-label-lg">O C E A N O</text>
+        <text x="710" y="615" class="geo-label-lg">P A C Í F I C O</text>
+        <text x="495" y="610" class="geo-label-md">CHINA</text>
+        <text x="480" y="562" class="geo-label-sm">TÍBET</text>
+        <text x="402" y="555" class="geo-label-sm">AFGANISTÁN</text>
+        <text x="365" y="828" class="geo-label-lg">I N D I A</text>
+        <text x="235" y="648" class="geo-label-md">ÁFRICA</text>
+        <text x="190" y="535" class="geo-label-sm">PARÍS</text>
+        <text x="122" y="622" class="geo-label-md">OCÉANO</text>
+        <text x="130" y="768" class="geo-label-md">ATLÁNTICO</text>
+        <text x="328" y="772" class="geo-label-md">OCEANO</text>
+        <text x="772" y="732" class="geo-label-sm">ARCHIPIÉLAGO</text>
+        <text x="780" y="752" class="geo-label-sm">BISMARCK</text>
+        <text x="795" y="902" class="geo-label-sm">AUSTRALIA</text>
+        <text x="960" y="968" class="geo-label-sm">NUEVA ZELANDA</text>
+        <text x="1198" y="898" class="geo-label-sm">ISLA DE PASCUA</text>
+        <text x="1378" y="868" class="geo-label-sm">TIERRA DE FUEGO</text>
+        <text x="1410" y="700" class="geo-label-md">PERÚ</text>
+        <text x="1318" y="642" class="geo-label-sm">MÉXICO</text>
+        <text x="1420" y="565" class="geo-label-md">OCÉANO</text>
+        <text x="1410" y="638" class="geo-label-md">ATLÁNTICO</text>
+      </svg>
+
+      <!-- Canvas transparente superpuesto para la animación de trayectos y brillos -->
       <canvas id="overlay-canvas" width="1600" height="1200"></canvas>
     </div>
   </div>
 
-  <!-- Contenedor para Cámara WebAR -->
+  <!-- Contenedor WebAR -->
   <div id="ar-container"></div>
 
-  <!-- Controles de Adelante / Atrás para los 13 sucesos -->
-  <div class="hud-panel">
-    <div class="event-header">
-      <span class="step-badge" id="step-badge">1</span>
-      <span class="event-location" id="event-location">Lancashire, Inglaterra</span>
-      <span class="event-counter" id="event-counter">Suceso 1 de 13</span>
+  <!-- Controles inferiores minimalistas (sin textos de sucesos históricos) -->
+  <div class="hud-bar">
+    <button class="nav-btn" id="prev-btn" disabled>⬅ Atrás</button>
+    <div class="destination-pill" id="replay-pill" title="Haz clic para repetir el trayecto y brillo">
+      <span class="step-dot" id="step-dot">1</span>
+      <span class="city-label" id="city-label">Lancashire</span>
     </div>
-    <p class="event-description" id="event-description">
-      Nace el 6 de abril de 1917 en Lancashire, Inglaterra.
-    </p>
-    <div class="controls-row">
-      <button class="nav-btn" id="prev-btn" disabled>⬅ Atrás</button>
-      <button class="replay-btn" id="replay-btn" title="Repetir animación del trayecto">↻ Trayecto</button>
-      <button class="nav-btn" id="next-btn">Adelante ➡</button>
-    </div>
+    <button class="nav-btn" id="next-btn">Adelante ➡</button>
   </div>
 
   <script>
     /**
-     * 13 Sucesos históricos y coordenadas normalizadas (0.0 a 1.0)
-     * calibradas exactamente sobre ./target/mapa_surrealista.jpg
+     * 13 Destinos en el Mapa Surrealista (sin textos históricos, con su color cromático propio)
      */
-    const CHRONOLOGY = [
-      {
-        id: 1,
-        place: "Lancashire, Inglaterra (1917)",
-        text: "Nace el 6 de abril de 1917 en Lancashire, Inglaterra.",
-        x: 0.089, y: 0.412,
-        color: "#c84b31"
-      },
-      {
-        id: 2,
-        place: "Florencia, Italia",
-        text: "Es enviada a estudiar a Florencia; conoce la Galería Uffizi.",
-        x: 0.148, y: 0.452,
-        color: "#2e5a27",
-        ctrl: { x: 0.128, y: 0.395 }
-      },
-      {
-        id: 3,
-        place: "Londres, Inglaterra",
-        text: "Estudia dibujo en la Academia de Amédée Ozenfant en Londres.",
-        x: 0.093, y: 0.428,
-        color: "#2b7bba",
-        ctrl: { x: 0.115, y: 0.468 }
-      },
-      {
-        id: 4,
-        place: "París, Francia",
-        text: "Viaja a París, donde se integra al movimiento surrealista.",
-        x: 0.114, y: 0.419,
-        color: "#3a7d6c",
-        ctrl: { x: 0.104, y: 0.405 }
-      },
-      {
-        id: 5,
-        place: "Saint-Martin d'Ardèche, Francia",
-        text: "Se instala en Saint-Martin d'Ardèche al sur de Francia, a lado de Max Ernst.",
-        x: 0.113, y: 0.453,
-        color: "#d1495b",
-        ctrl: { x: 0.123, y: 0.436 }
-      },
-      {
-        id: 6,
-        place: "Santander, España",
-        text: "Huye a España; es internada en un hospital psiquiátrico en Santander.",
-        x: 0.138, y: 0.461,
-        color: "#5c8d89",
-        ctrl: { x: 0.126, y: 0.472 }
-      },
-      {
-        id: 7,
-        place: "Lisboa, Portugal",
-        text: "En Lisboa, logra escapar de su enfermera. Se casa con Renato Leduc.",
-        x: 0.106, y: 0.468,
-        color: "#e07a2b",
-        ctrl: { x: 0.122, y: 0.485 }
-      },
-      {
-        id: 8,
-        place: "Nueva York, EE. UU.",
-        text: "Huye a Nueva York al lado de Leduc. Se reintegra al grupo surrealista.",
-        x: 0.864, y: 0.408,
-        color: "#e0b000",
-        // Curva superior siguiendo el arco del mapa surrealista por Rusia y Alaska
-        ctrl: { x: 0.485, y: 0.145 }
-      },
-      {
-        id: 9,
-        place: "Ciudad de México, México",
-        text: "Llega a México, se casa con Emerico 'Chiki' Weisz. Es amiga íntima de Remedios Varo.",
-        x: 0.808, y: 0.483,
-        color: "#6a4c93",
-        ctrl: { x: 0.855, y: 0.465 }
-      },
-      {
-        id: 10,
-        place: "Xilitla, San Luis Potosí",
-        text: "Visita a Edward James en Xilitla, San Luis Potosí.",
-        x: 0.823, y: 0.468,
-        color: "#8d2b2b",
-        ctrl: { x: 0.805, y: 0.468 }
-      },
-      {
-        id: 11,
-        place: "Nueva York, EE. UU.",
-        text: "Se establece en Nueva York en varias ocasiones.",
-        x: 0.873, y: 0.424,
-        color: "#1982c4",
-        ctrl: { x: 0.862, y: 0.455 }
-      },
-      {
-        id: 12,
-        place: "Chicago, EE. UU.",
-        text: "Vive en Chicago por unos años.",
-        x: 0.850, y: 0.431,
-        color: "#2b580c",
-        ctrl: { x: 0.862, y: 0.415 }
-      },
-      {
-        id: 13,
-        place: "Ciudad de México (2011)",
-        text: "Fallece en la Ciudad de México, el 25 de mayo de 2011.",
-        x: 0.809, y: 0.513,
-        color: "#c93b4b",
-        ctrl: { x: 0.812, y: 0.465 }
-      }
+    const DESTINATIONS = [
+      { id: 1,  city: "Lancashire",             x: 0.089, y: 0.412, color: "#e64833" },
+      { id: 2,  city: "Florencia",              x: 0.148, y: 0.452, color: "#3b8ea5", ctrl: { x: 0.128, y: 0.390 } },
+      { id: 3,  city: "Londres",                x: 0.093, y: 0.428, color: "#2d9cdb", ctrl: { x: 0.115, y: 0.472 } },
+      { id: 4,  city: "París",                  x: 0.114, y: 0.419, color: "#27ae60", ctrl: { x: 0.104, y: 0.402 } },
+      { id: 5,  city: "Saint-Martin d'Ardèche", x: 0.113, y: 0.453, color: "#eb3b5a", ctrl: { x: 0.125, y: 0.436 } },
+      { id: 6,  city: "Santander",              x: 0.138, y: 0.461, color: "#45aaf2", ctrl: { x: 0.126, y: 0.476 } },
+      { id: 7,  city: "Lisboa",                 x: 0.106, y: 0.468, color: "#fa8231", ctrl: { x: 0.122, y: 0.488 } },
+      { id: 8,  city: "Nueva York",             x: 0.864, y: 0.408, color: "#fed330", ctrl: { x: 0.485, y: 0.135 } },
+      { id: 9,  city: "Ciudad de México",       x: 0.808, y: 0.483, color: "#a55eea", ctrl: { x: 0.858, y: 0.468 } },
+      { id: 10, city: "Xilitla",                x: 0.823, y: 0.468, color: "#eb2f06", ctrl: { x: 0.804, y: 0.466 } },
+      { id: 11, city: "Nueva York",             x: 0.873, y: 0.424, color: "#0fb9b1", ctrl: { x: 0.864, y: 0.456 } },
+      { id: 12, city: "Chicago",                x: 0.850, y: 0.431, color: "#20bf6b", ctrl: { x: 0.862, y: 0.412 } },
+      { id: 13, city: "Ciudad de México",       x: 0.809, y: 0.513, color: "#ff3838", ctrl: { x: 0.812, y: 0.465 } }
     ];
 
     const canvas = document.getElementById("overlay-canvas");
@@ -368,22 +363,33 @@
     let currentIndex = 0;
     let previousIndex = null;
     let animStartTime = performance.now();
-    const TRAVEL_DURATION = 1350; // ms que dura el trayecto punteado
+    let arrivalBurstTime = performance.now();
+    let arrivedTriggered = true;
+    const TRAVEL_DURATION = 1450;
 
-    // Referencias UI
-    const stepBadge = document.getElementById("step-badge");
-    const eventLocation = document.getElementById("event-location");
-    const eventCounter = document.getElementById("event-counter");
-    const eventDescription = document.getElementById("event-description");
+    // Partículas de destello al llegar a cada ciudad
+    const particles = [];
+
+    const stepDot = document.getElementById("step-dot");
+    const cityLabel = document.getElementById("city-label");
     const prevBtn = document.getElementById("prev-btn");
     const nextBtn = document.getElementById("next-btn");
-    const replayBtn = document.getElementById("replay-btn");
+    const replayPill = document.getElementById("replay-pill");
     const toggleArBtn = document.getElementById("toggle-ar-btn");
     const statusText = document.getElementById("status-text");
 
     let arTexture = null;
 
-    // Evalúa un punto en una curva Bézier cuadrática en t ∈ [0, 1]
+    // Convierte color HEX a RGBA
+    function hexToRgba(hex, alpha) {
+      const clean = hex.replace("#", "");
+      const r = parseInt(clean.substring(0, 2), 16);
+      const g = parseInt(clean.substring(2, 4), 16);
+      const b = parseInt(clean.substring(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    // Evalúa curva Bézier cuadrática
     function getQuadraticPoint(p0, pc, p1, t) {
       const invT = 1 - t;
       return {
@@ -392,9 +398,56 @@
       };
     }
 
-    // Dibuja únicamente el trayecto activo con línea punteada hasta el progreso `progress` (0 a 1)
-    function drawPartialDottedCurve(p0, pc, p1, progress, color, time) {
-      const steps = 90;
+    // Genera partículas luminosas del color de la ciudad al llegar al punto
+    function spawnArrivalParticles(normX, normY, color) {
+      const cx = normX * canvas.width;
+      const cy = normY * canvas.height;
+      for (let i = 0; i < 26; i++) {
+        const angle = (Math.PI * 2 * i) / 26 + (Math.random() - 0.5) * 0.25;
+        const speed = 1.2 + Math.random() * 3.4;
+        particles.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          radius: 2.5 + Math.random() * 3.5,
+          color: color,
+          alpha: 1,
+          decay: 0.014 + Math.random() * 0.015
+        });
+      }
+    }
+
+    // Dibuja y actualiza las partículas de brillo
+    function updateAndDrawParticles() {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(p.color, p.alpha);
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 14;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Dibuja únicamente el trayecto activo con línea punteada brillante y cabeza de cometa
+    function drawAnimatedTrajectory(p0, pc, p1, progress, color, now) {
+      const steps = 100;
       const maxStep = Math.floor(steps * progress);
       if (maxStep < 1) return;
 
@@ -408,68 +461,96 @@
         ctx.lineTo(pt.x * canvas.width, pt.y * canvas.height);
       }
 
-      // Sombra suave para destacar sobre el mapa sin saturarlo
-      ctx.shadowColor = "rgba(0, 0, 0, 0.65)";
-      ctx.shadowBlur = 6;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 5.5;
+      // Halo exterior de la línea punteada
+      ctx.strokeStyle = hexToRgba(color, 0.95);
+      ctx.lineWidth = 6;
       ctx.lineCap = "round";
-      ctx.setLineDash([10, 12]);
-      ctx.lineDashOffset = -(time * 0.035); // Efecto de avance en los puntos
+      ctx.setLineDash([10, 14]);
+      ctx.lineDashOffset = -(now * 0.045);
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+
+      // Núcleo luminoso punteado
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.2;
       ctx.stroke();
       ctx.restore();
 
-      // Punto viajero brillante en la punta del trayecto mientras avanza
+      // Cabeza viajera con destello intenso mientras se desplaza
       if (progress < 1) {
         const head = getQuadraticPoint(p0, pc, p1, progress);
+        const hx = head.x * canvas.width;
+        const hy = head.y * canvas.height;
+
         ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const grad = ctx.createRadialGradient(hx, hy, 2, hx, hy, 34);
+        grad.addColorStop(0, "#ffffff");
+        grad.addColorStop(0.35, hexToRgba(color, 0.9));
+        grad.addColorStop(1, hexToRgba(color, 0));
+
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(head.x * canvas.width, head.y * canvas.height, 8, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 14;
+        ctx.arc(hx, hy, 34, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
     }
 
-    // Dibuja el efecto de pulso concéntrico al llegar al punto histórico
-    function drawArrivalPulse(point, time, isArrived) {
+    // Dibuja el brillo pulsante del color del punto o ciudad al llegar al destino
+    function drawCityGlowPulse(point, now) {
       const cx = point.x * canvas.width;
       const cy = point.y * canvas.height;
 
       ctx.save();
 
-      if (isArrived) {
-        // Dos ondas expansivas de pulso
-        for (let ring = 0; ring < 2; ring++) {
-          const cycle = ((time * 0.0012 + ring * 0.5) % 1);
-          const radius = 14 + cycle * 44;
-          const alpha = (1 - cycle) * 0.85;
+      // 1. Brillo radial pulsante continuo (efecto Bloom del color de la ciudad)
+      const pulseBeat = 0.5 + 0.5 * Math.sin(now * 0.0055);
+      const glowRadius = 52 + pulseBeat * 38;
 
-          ctx.beginPath();
-          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-          ctx.strokeStyle = point.color;
-          ctx.globalAlpha = alpha;
-          ctx.lineWidth = 4;
-          ctx.stroke();
-        }
-      }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const radialGlow = ctx.createRadialGradient(cx, cy, 4, cx, cy, glowRadius);
+      radialGlow.addColorStop(0, "#ffffff");
+      radialGlow.addColorStop(0.22, hexToRgba(point.color, 0.95));
+      radialGlow.addColorStop(0.58, hexToRgba(point.color, 0.45));
+      radialGlow.addColorStop(1, hexToRgba(point.color, 0));
 
-      // Marcador central activo
-      ctx.globalAlpha = 1;
+      ctx.fillStyle = radialGlow;
       ctx.beginPath();
-      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Tres ondas luminosas concéntricas del color del punto
+      for (let i = 0; i < 3; i++) {
+        const wave = ((now * 0.0009 + i * 0.33) % 1);
+        const r = 16 + wave * 68;
+        const alpha = Math.pow(1 - wave, 1.5) * 0.9;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(point.color, alpha);
+        ctx.lineWidth = 3.5;
+        ctx.shadowColor = point.color;
+        ctx.shadowBlur = 16;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 3. Esfera central del destino con borde brillante
+      ctx.beginPath();
+      ctx.arc(cx, cy, 15, 0, Math.PI * 2);
       ctx.fillStyle = point.color;
-      ctx.shadowColor = "rgba(0,0,0,0.75)";
-      ctx.shadowBlur = 8;
+      ctx.shadowColor = point.color;
+      ctx.shadowBlur = 22;
       ctx.fill();
 
       ctx.lineWidth = 3;
       ctx.strokeStyle = "#ffffff";
       ctx.stroke();
 
-      // Número del suceso dentro del pulso
+      // Número del punto
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 14px Georgia, serif";
       ctx.textAlign = "center";
@@ -479,48 +560,55 @@
       ctx.restore();
     }
 
-    // Bucle principal de animación (limpia el lienzo para no dejar líneas fijas acumuladas)
+    // Bucle principal de renderizado
     function renderLoop(now) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const currentEvent = CHRONOLOGY[currentIndex];
+      const currentDest = DESTINATIONS[currentIndex];
 
       if (previousIndex !== null && previousIndex !== currentIndex) {
-        const prevEvent = CHRONOLOGY[previousIndex];
+        const prevDest = DESTINATIONS[previousIndex];
         const elapsed = now - animStartTime;
         const rawProgress = Math.min(1, elapsed / TRAVEL_DURATION);
-        // Suavizado easeInOutCubic
+
+        // Curva de aceleración suave
         const progress = rawProgress < 0.5
           ? 4 * rawProgress * rawProgress * rawProgress
           : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
 
-        // Punto de control de la curva entre el suceso anterior y el actual
-        const ctrlSource = currentIndex > previousIndex ? currentEvent.ctrl : prevEvent.ctrl;
+        const ctrlSource = currentIndex > previousIndex ? currentDest.ctrl : prevDest.ctrl;
         const pc = ctrlSource || {
-          x: (prevEvent.x + currentEvent.x) / 2,
-          y: Math.min(prevEvent.y, currentEvent.y) - 0.05
+          x: (prevDest.x + currentDest.x) / 2,
+          y: Math.min(prevDest.y, currentDest.y) - 0.05
         };
 
-        // Marcador discreto en el punto de salida
+        // Punto de origen tenue
         ctx.save();
         ctx.beginPath();
-        ctx.arc(prevEvent.x * canvas.width, prevEvent.y * canvas.height, 8, 0, Math.PI * 2);
-        ctx.fillStyle = prevEvent.color;
-        ctx.globalAlpha = 0.7;
+        ctx.arc(prevDest.x * canvas.width, prevDest.y * canvas.height, 8, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(prevDest.color, 0.65);
+        ctx.shadowColor = prevDest.color;
+        ctx.shadowBlur = 10;
         ctx.fill();
         ctx.restore();
 
-        // Línea punteada animada del trayecto actual
-        drawPartialDottedCurve(prevEvent, pc, currentEvent, progress, currentEvent.color, now);
+        // Trayecto punteado activo
+        drawAnimatedTrajectory(prevDest, pc, currentDest, progress, currentDest.color, now);
 
-        // Al llegar al destino (progress >= 0.98), activa los pulsos en el lugar
+        // Al llegar al destino se dispara la explosión de partículas y el pulso de brillo
         if (progress >= 0.98) {
-          drawArrivalPulse(currentEvent, now, true);
+          if (!arrivedTriggered) {
+            arrivedTriggered = true;
+            arrivalBurstTime = now;
+            spawnArrivalParticles(currentDest.x, currentDest.y, currentDest.color);
+          }
+          drawCityGlowPulse(currentDest, now);
         }
       } else {
-        // Suceso inicial (1) con pulso directo
-        drawArrivalPulse(currentEvent, now, true);
+        drawCityGlowPulse(currentDest, now);
       }
+
+      updateAndDrawParticles();
 
       if (arTexture) {
         arTexture.needsUpdate = true;
@@ -529,51 +617,51 @@
       requestAnimationFrame(renderLoop);
     }
 
-    // Actualiza la interfaz y dispara la animación hacia el suceso seleccionado
-    function goToStep(newIndex, fromIndex = currentIndex) {
-      if (newIndex < 0 || newIndex >= CHRONOLOGY.length) return;
+    // Cambiar de destino
+    function goToDestination(newIndex, fromIndex = currentIndex) {
+      if (newIndex < 0 || newIndex >= DESTINATIONS.length) return;
 
       previousIndex = fromIndex;
       currentIndex = newIndex;
       animStartTime = performance.now();
+      arrivedTriggered = (fromIndex === null || fromIndex === newIndex);
 
-      const item = CHRONOLOGY[currentIndex];
-      stepBadge.textContent = item.id;
-      stepBadge.style.backgroundColor = item.color;
-      eventLocation.textContent = item.place;
-      eventCounter.textContent = `Suceso ${item.id} de ${CHRONOLOGY.length}`;
-      eventDescription.textContent = item.text;
+      const dest = DESTINATIONS[currentIndex];
+      if (arrivedTriggered) {
+        spawnArrivalParticles(dest.x, dest.y, dest.color);
+      }
+
+      stepDot.textContent = dest.id;
+      stepDot.style.backgroundColor = dest.color;
+      stepDot.style.boxShadow = `0 0 16px ${dest.color}`;
+      cityLabel.textContent = dest.city;
 
       prevBtn.disabled = currentIndex === 0;
-      nextBtn.disabled = currentIndex === CHRONOLOGY.length - 1;
+      nextBtn.disabled = currentIndex === DESTINATIONS.length - 1;
     }
 
     prevBtn.addEventListener("click", () => {
-      if (currentIndex > 0) goToStep(currentIndex - 1, currentIndex);
+      if (currentIndex > 0) goToDestination(currentIndex - 1, currentIndex);
     });
 
     nextBtn.addEventListener("click", () => {
-      if (currentIndex < CHRONOLOGY.length - 1) goToStep(currentIndex + 1, currentIndex);
+      if (currentIndex < DESTINATIONS.length - 1) goToDestination(currentIndex + 1, currentIndex);
     });
 
-    replayBtn.addEventListener("click", () => {
+    replayPill.addEventListener("click", () => {
       const origin = currentIndex > 0 ? currentIndex - 1 : null;
-      goToStep(currentIndex, origin);
+      goToDestination(currentIndex, origin);
     });
 
-    // Soporte con teclas de flecha izquierda / derecha
     window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowRight" && currentIndex < CHRONOLOGY.length - 1) {
-        goToStep(currentIndex + 1, currentIndex);
+      if (e.key === "ArrowRight" && currentIndex < DESTINATIONS.length - 1) {
+        goToDestination(currentIndex + 1, currentIndex);
       } else if (e.key === "ArrowLeft" && currentIndex > 0) {
-        goToStep(currentIndex - 1, currentIndex);
+        goToDestination(currentIndex - 1, currentIndex);
       }
     });
 
-    /**
-     * Modo Cámara WebAR: compila ./target/mapa_surrealista.jpg directamente en el navegador
-     * y superpone únicamente el canvas transparente con las líneas punteadas y pulsos
-     */
+    // Integración con Cámara WebAR sobre ./target/mapa_surrealista.jpg
     let arStarted = false;
     let arActive = false;
     let mindarThree = null;
@@ -585,16 +673,15 @@
       if (!arActive) {
         try {
           toggleArBtn.disabled = true;
-          statusText.textContent = "Preparando reconocimiento de target JPG...";
+          statusText.textContent = "Compilando mapa target para AR...";
 
           if (!arStarted) {
-            const img = document.getElementById("base-map-img");
+            const img = document.getElementById("hidden-target-img");
             await img.decode();
 
-            // Compila el archivo ./target/mapa_surrealista.jpg en memoria para WebAR
             const compiler = new window.MINDAR.IMAGE.Compiler();
             await compiler.compileImageTargets([img], (progress) => {
-              statusText.textContent = `Procesando mapa target: ${Math.round(progress)}%`;
+              statusText.textContent = `Procesando target: ${Math.round(progress)}%`;
             });
             const exportedBuffer = await compiler.exportData();
             const blob = new Blob([exportedBuffer]);
@@ -608,7 +695,6 @@
             const { renderer, scene, camera } = mindarThree;
             const anchor = mindarThree.addAnchor(0);
 
-            // Textura transparente con únicamente los trayectos punteados y pulsos
             arTexture = new THREE.CanvasTexture(canvas);
             const aspect = canvas.height / canvas.width;
             const planeGeo = new THREE.PlaneGeometry(1, aspect);
@@ -621,7 +707,7 @@
             anchor.group.add(overlayMesh);
 
             anchor.onTargetFound = () => {
-              statusText.textContent = "Mapa detectado — Usa Adelante / Atrás";
+              statusText.textContent = "Mapa reconocido — Pulso cromático activo";
             };
             anchor.onTargetLost = () => {
               statusText.textContent = "Apunta la cámara al Mapa Surrealista";
@@ -640,11 +726,11 @@
           mapStage.style.opacity = "0";
           mapStage.style.pointerEvents = "none";
           arContainer.style.display = "block";
-          toggleArBtn.textContent = "🗺️ Ver Mapa en Pantalla";
+          toggleArBtn.textContent = "🗺️ Vista Vectorial";
           statusText.textContent = "Apunta la cámara al Mapa Surrealista";
         } catch (err) {
           console.error(err);
-          statusText.textContent = "Cámara no disponible — Modo Mapa Interactivo activo";
+          statusText.textContent = "Sin cámara — Vista Vectorial Activa";
         } finally {
           toggleArBtn.disabled = false;
         }
@@ -654,13 +740,13 @@
         arContainer.style.display = "none";
         mapStage.style.opacity = "1";
         mapStage.style.pointerEvents = "auto";
-        toggleArBtn.textContent = "📷 Escaneo AR (Cámara)";
-        statusText.textContent = "Cronología interactiva: Leonora Carrington";
+        toggleArBtn.textContent = "📷 Activar Cámara AR";
+        statusText.textContent = "Modo Vectorial Activo — 13 Destinos";
       }
     });
 
-    // Inicia en el Suceso 1 y arranca el bucle de animación
-    goToStep(0, null);
+    // Inicia en el punto 1 con destello cromático inmediato
+    goToDestination(0, null);
     requestAnimationFrame(renderLoop);
   </script>
 </body>
